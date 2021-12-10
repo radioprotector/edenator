@@ -1,23 +1,7 @@
 import { Reader } from "jsmediatags";
 import { TagType } from "jsmediatags/types";
 import Peak from "./Peak";
-
-export interface AnalyzerResult
-{
-  title: string;
-
-  artist: string;
-
-  bpm: Number;
-
-  subBass: Peak[];
-
-  bass: Peak[];
-
-  beat: Peak[];
-
-  treble: Peak[];
-}
+import { TrackAnalysis } from "./TrackAnalysis";
 
 function getBpmTagValue(tagCollection: TagType): number | null {
   // Look for, in order of preference: BPM, TBPM, TMPO
@@ -157,7 +141,7 @@ async function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, max
     });
 }
 
-export async function analyzeTrack(file: File): Promise<AnalyzerResult> {
+export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
   const rawByteBuffer = file.arrayBuffer();
 
   const tags = rawByteBuffer.then(() => getTrackTags(file));
@@ -169,7 +153,7 @@ export async function analyzeTrack(file: File): Promise<AnalyzerResult> {
   const treble = Promise.resolve([]);
 
   return Promise.all([tags, subBass, bass, beat, treble])
-    .then((values): AnalyzerResult => {
+    .then((values): TrackAnalysis => {
       const [tagResult, subBassResult, bassResult, beatResult, trebleResult] = values;
 
       return {
