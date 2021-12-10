@@ -20,6 +20,7 @@ function App(): JSX.Element {
   // Ensure that the audio player has an audio context/analyzer node set up
   const audioPlayerRef = useCallback(
     (node: HTMLAudioElement) => {
+      if (node != null) {
       const audioSource = new MediaElementAudioSourceNode(audioContext, { mediaElement: node });
       const analyser = new AnalyserNode(audioContext, { fftSize: 128 });
 
@@ -28,6 +29,7 @@ function App(): JSX.Element {
 
       audioPlayerElement.current = node;
       audioAnalyser.current = analyser;
+      }
     },
     [],
   );
