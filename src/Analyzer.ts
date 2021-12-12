@@ -142,15 +142,11 @@ async function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, max
 }
 
 export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
-  const rawByteBuffer = file.arrayBuffer();
-
-  const tags = rawByteBuffer.then(() => getTrackTags(file));
-  // const tags = getTrackTags(file);
-
-  const subBass = Promise.resolve([]);
-  const bass = Promise.resolve([]);
-  const beat = rawByteBuffer.then((byteBuffer) => getPeaks(byteBuffer, 100, 150, 300));
-  const treble = Promise.resolve([]);
+  const tags = getTrackTags(file);
+  const subBass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, 20, 60, 60));
+  const bass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, 60, 100, 120));
+  const beat = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, 100, 250, 300));
+  const treble = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, 2048, null, 120));
 
   return Promise.all([tags, subBass, bass, beat, treble])
     .then((values): TrackAnalysis => {
