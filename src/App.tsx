@@ -1,7 +1,9 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useMemo } from 'react';
 import { analyzeTrack } from './Analyzer';
-import './App.css';
 import { EmptyTrackAnalysis, TrackAnalysis } from './TrackAnalysis';
+
+import './App.css';
+import Visualizer from './Visualizer';
 
 function App(): JSX.Element {
   // Keep track of what we played last
@@ -10,7 +12,7 @@ function App(): JSX.Element {
   const [currentAnalysis, updateCurrentAnalysis] = useState(EmptyTrackAnalysis);
 
   // XXX: Investigate supprting webkitAudioContext
-  const audioContext = new AudioContext();
+  const audioContext = useMemo(() => new AudioContext(), []);
   const sourceFileElement = useRef<HTMLInputElement>(null);
 
   // These are indirect refs set up via audio player callback
@@ -21,17 +23,17 @@ function App(): JSX.Element {
   const audioPlayerRef = useCallback(
     (node: HTMLAudioElement) => {
       if (node != null) {
-      const audioSource = new MediaElementAudioSourceNode(audioContext, { mediaElement: node });
-      const analyser = new AnalyserNode(audioContext, { fftSize: 128 });
+        const audioSource = new MediaElementAudioSourceNode(audioContext, { mediaElement: node });
+        const analyser = new AnalyserNode(audioContext, { fftSize: 128 });
 
-      audioSource.connect(analyser);
-      analyser.connect(audioContext.destination);
+        audioSource.connect(analyser);
+        analyser.connect(audioContext.destination);
 
-      audioPlayerElement.current = node;
-      audioAnalyser.current = analyser;
+        audioPlayerElement.current = node;
+        audioAnalyser.current = analyser;
       }
     },
-    [],
+    [audioContext],
   );
 
   const selectedFileChange = () => {
@@ -85,6 +87,9 @@ function App(): JSX.Element {
         <input type="file" ref={sourceFileElement} id="sourceFileElement" accept="audio/*" onChange={selectedFileChange} />
       </label>
       <audio ref={audioPlayerRef} id="audioPlayerElement" controls></audio>
+      <div id="canvas-container">
+        <Visualizer audio={audioPlayerElement} analyser={audioAnalyser} trackAnalysis={currentAnalysis} />
+      </div>
     </div>
   );
 }
