@@ -95,13 +95,14 @@ async function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, max
       for(let frameIdx = 0; frameIdx < frames.length;)
       {
         // See if we're ready to start a new peak
-        if (Math.abs(frames[frameIdx]) >= INITIAL_THRESHOLD) 
+        if (Math.abs(frames[frameIdx]) >= INITIAL_THRESHOLD)
         {
           // Start a new peak, and mark when it was encountered
           const newPeak = {
             time: frameIdx / SAMPLE_RATE,
             intensity: 0,
-            frames: 1
+            frames: 1,
+            end: 0 // To be calculated
           };
 
           // Determine the maximum intensity and number of frames it was above the threshold
@@ -114,10 +115,14 @@ async function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, max
             frameIdx++;
           } while(frameIdx < frames.length && Math.abs(frames[frameIdx]) >= INITIAL_THRESHOLD)
 
+          // Now calculate the end of the peak
+          newPeak.end = frameIdx / SAMPLE_RATE;
+
+          // Store the peak
           peaksList.push(newPeak);
 
-          // Move forward a sixteenth of a second
-          frameIdx += Math.ceil(SAMPLE_RATE / 16);
+          // Move forward 1/32 seconds
+          frameIdx += Math.ceil(SAMPLE_RATE / 32);
         }
 
         frameIdx++;

@@ -8,6 +8,11 @@ export default interface Peak {
   time: number;
 
   /**
+   * The end of the peak, in seconds.
+   */
+   end: number;
+
+  /**
    * The intensity of the peak on a 0.0-1.0 scale.
    */
   intensity: number;
