@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@react-three/fiber": "^7.0.21",
+    "@react-three/postprocessing": "^2.0.5",
     "@testing-library/jest-dom": "^5.15.1",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
@@ -12,6 +13,7 @@
     "@types/react": "^17.0.37",
     "@types/react-dom": "^17.0.11",
     "jsmediatags": "^3.9.7",
+    "postprocessing": "^6.23.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",

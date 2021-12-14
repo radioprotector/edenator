@@ -1,6 +1,9 @@
-import React, { RefObject, useEffect, useRef } from 'react';
+import { RefObject, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
+import { Bloom, EffectComposer, GodRays } from '@react-three/postprocessing';
+import { BlendFunction, Resizer, KernelSize } from 'postprocessing';
+
 import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
 
@@ -15,7 +18,7 @@ function getBasePosition(sideIdx: number, totalSides: number, scale: number): TH
   // For alternating sets, further perturb the angle
   if (Math.ceil(sideIdx / totalSides) % 2 === 0) {
     angle += Math.PI / totalSides;
-  }
+  } 
 
   return new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(scale);
 }
@@ -137,10 +140,21 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
 }
 
 function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
+  const sunMesh = useRef<THREE.Mesh>(null!);
+  const godRaysEffect = useRef<typeof GodRays>(null!);
+
   return (
     <Canvas camera={{position: [0, 0, 15]}}>
       <ambientLight intensity={0.1} />
       <directionalLight position={[0, 0, 20]} />
+      <mesh 
+        ref={sunMesh}
+        frustumCulled={false}
+        position={[0, 0, -200]}
+      >
+        <sphereGeometry args={[5]} />
+        <meshBasicMaterial color={0xffcc55} transparent={true} fog={false} />
+      </mesh>
       <PeakQueue audio={props.audio} peaks={props.trackAnalysis.beat} />
       {/* 
         These are just to help visualize positioned elements relative to the camera.
@@ -173,6 +187,30 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         <sphereGeometry />
         <meshBasicMaterial color={0xff0000} />
       </mesh> */}
+      <EffectComposer>
+        <Bloom
+          intensity={0.5}
+          width={Resizer.AUTO_SIZE}
+          height={Resizer.AUTO_SIZE}
+          kernelSize={KernelSize.LARGE}
+          luminanceThreshold={0.5}
+          luminanceSmoothing={0.025}
+        />
+        {sunMesh.current && 
+          <GodRays 
+            sun={sunMesh.current}
+            blendFunction={BlendFunction.Screen}
+            samples={60}
+            density={0.96}
+            decay={0.9}
+            weight={0.4}
+            exposure={0.6}
+            clampMax={1}
+            width={Resizer.AUTO_SIZE}
+            height={Resizer.AUTO_SIZE}
+            kernelSize={KernelSize.SMALL}
+          />}
+      </EffectComposer>
     </Canvas>
   );
 }
