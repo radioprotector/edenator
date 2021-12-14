@@ -82,11 +82,11 @@ function App(): JSX.Element {
 
   return (
     <div>
-      <label htmlFor="sourceFileElement">
+      <label htmlFor="sourceFile">
         Choose an audio file
-        <input type="file" ref={sourceFileElement} id="sourceFileElement" accept="audio/*" onChange={selectedFileChange} />
+        <input type="file" ref={sourceFileElement} id="sourceFile" accept="audio/*" onChange={selectedFileChange} />
       </label>
-      <audio ref={audioPlayerRef} id="audioPlayerElement" controls></audio>
+      <audio ref={audioPlayerRef} id="audioPlayer" controls></audio>
       <div id="canvas-container">
         <Visualizer audio={audioPlayerElement} analyser={audioAnalyser} trackAnalysis={currentAnalysis} />
       </div>
