@@ -18,6 +18,11 @@ export default interface Peak {
   intensity: number;
 
   /**
+   * The intensity of the peak on a 0.0-1.0 scale, normalized relative to the current volume.
+   */
+   intensityNormalized: number;
+
+  /**
    * The number of sample frames for which the peak was encountered.
    */
   frames: number;

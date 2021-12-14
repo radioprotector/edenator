@@ -102,11 +102,32 @@ function getBpmTagValue(tagCollection: TagType): number | null {
   }
 }
 
-function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, maxFrequency: number | null, expectedMaximumPeaksPerMinute: number): Promise<Peak[]> {
+function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
   // For processing, downmix to mono
   // HACK: Assume that the offline audio buffer length won't be any different from the bytebuffer length
   // XXX: Look at getting webkitOfflineAudioContext supported as well
   const audioContext = new window.OfflineAudioContext(1, audioData.byteLength, ANALYZER_SAMPLE_RATE);
+
+  return audioContext.decodeAudioData(audioData)
+  .then((decodedData: AudioBuffer) => {
+    const bufferSource = audioContext.createBufferSource();
+    bufferSource.buffer = decodedData;
+
+    // Now wire up the destination
+    bufferSource.connect(audioContext.destination);
+    bufferSource.start(0);
+    return audioContext.startRendering();
+  })
+  .then((renderedBuffer: AudioBuffer) => {
+    return renderedBuffer.getChannelData(0);
+  });
+}
+
+function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFrequency: number | null, maxFrequency: number | null, expectedMaximumPeaksPerMinute: number): Promise<Peak[]> {
+  // For processing, downmix to mono
+  // HACK: Assume that the offline audio buffer length won't be any different from the bytebuffer length
+  // XXX: Look at getting webkitOfflineAudioContext supported as well
+  const audioContext = new window.OfflineAudioContext(1, overallVolume.byteLength, ANALYZER_SAMPLE_RATE);
   
   return audioContext.decodeAudioData(audioData)
     .then((decodedData: AudioBuffer) => {
@@ -140,17 +161,22 @@ function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, maxFreque
       // console.trace('audio rendered', { length: renderedBuffer.length, sampleRate: renderedBuffer.sampleRate, channels: renderedBuffer.numberOfChannels, duration: renderedBuffer.duration });
       const frames = renderedBuffer.getChannelData(0);
       const peaksList: Peak[] = [];
-      const INITIAL_THRESHOLD = 0.5;
+      const ABSOLUTE_THRESHOLD = 0.5;
+      const RELATIVE_THRESHOLD = 0.65;
 
       for(let frameIdx = 0; frameIdx < frames.length;)
       {
+        let currentFrameIntensity = Math.abs(frames[frameIdx]);
+        let currentFrameIntensityNormalized = currentFrameIntensity / Math.abs(overallVolume[frameIdx]);
+
         // See if we're ready to start a new peak
-        if (Math.abs(frames[frameIdx]) >= INITIAL_THRESHOLD)
+        if (currentFrameIntensity >= ABSOLUTE_THRESHOLD && currentFrameIntensityNormalized >= RELATIVE_THRESHOLD)
         {
           // Start a new peak, and mark when it was encountered
           const newPeak = {
             time: frameIdx / ANALYZER_SAMPLE_RATE,
             intensity: 0,
+            intensityNormalized: 0,
             frames: 1,
             end: 0 // To be calculated
           };
@@ -158,12 +184,15 @@ function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, maxFreque
           // Determine the maximum intensity and number of frames it was above the threshold
           do {
             // See if this peak reached a new intensity
-            newPeak.intensity = Math.max(newPeak.intensity, Math.abs(frames[frameIdx]))
+            newPeak.intensity = Math.max(newPeak.intensity, currentFrameIntensity)
+            newPeak.intensityNormalized = Math.max(newPeak.intensityNormalized, currentFrameIntensityNormalized)
             newPeak.frames++;
 
-            // Look at the next frame
+            // Look at the next frame and recalculate the current intensity (both absolute and normalized)
             frameIdx++;
-          } while(frameIdx < frames.length && Math.abs(frames[frameIdx]) >= INITIAL_THRESHOLD)
+            currentFrameIntensity = Math.abs(frames[frameIdx]);
+            currentFrameIntensityNormalized = currentFrameIntensity / Math.abs(overallVolume[frameIdx]);
+          } while(frameIdx < frames.length && currentFrameIntensity >= ABSOLUTE_THRESHOLD && currentFrameIntensityNormalized >= RELATIVE_THRESHOLD)
 
           // Now calculate the end of the peak
           newPeak.end = frameIdx / ANALYZER_SAMPLE_RATE;
@@ -183,7 +212,7 @@ function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, maxFreque
 
       if (peaksList.length > expectedMaximumPeaks) {
         // Sort from least-intense to most-intense
-        peaksList.sort((a, b) => a.intensity - b.intensity);
+        peaksList.sort((a, b) => a.intensityNormalized - b.intensityNormalized);
 
         // Remove the least-intense
         peaksList.splice(0, peaksList.length - expectedMaximumPeaks);
@@ -198,10 +227,12 @@ function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, maxFreque
 
 export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
   const tags = getTrackTags(file);
-  const subBass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, 20, 60, 60));
-  const bass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, 60, 100, 120));
-  const beat = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, 100, 250, 300));
-  const treble = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, 2048, null, 120));
+  const overallVolume = await file.arrayBuffer().then((byteBuffer) => getTrackVolume(byteBuffer));
+
+  const subBass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, 20, 50, 60));
+  const bass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, 50, 90, 120));
+  const beat = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, 90, 250, 300));
+  const treble = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, 2048, null, 120));
 
   return Promise.all([tags, subBass, bass, beat, treble])
     .then((values): TrackAnalysis => {
