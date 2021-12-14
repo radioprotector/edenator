@@ -32,7 +32,7 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
   const BASE_COLOR = new THREE.Color(0x770077);
   const WHITE_COLOR = new THREE.Color(0xffffff);
 
-  // Generate available meshes
+  // Generate available meshes for use in a ring buffer
   const availableMeshElements = 
     generateNumericArray(SIDES * 6).map((sideNumber) => {
       return <mesh
@@ -41,7 +41,6 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
         position={getBasePosition(sideNumber, SIDES, RADIUS)}
       >
         <sphereGeometry />
-        {/* <boxGeometry args={[2, 2, 2]} /> */}
         <meshPhongMaterial color={BASE_COLOR} emissive={WHITE_COLOR} emissiveIntensity={0} />
       </mesh>
     });
@@ -133,54 +132,6 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
   return (
     <group>
       {availableMeshElements}
-      {/* <mesh
-        ref={(mesh: THREE.Mesh) => availableMeshesRing.current[0] = mesh}
-        visible={false}
-        position={getBasePosition(0, SIDES, RADIUS)}
-      >
-        <boxGeometry args={[2, 2, 2]} />
-        <meshNormalMaterial />
-      </mesh>
-      <mesh
-        ref={(mesh: THREE.Mesh) => availableMeshesRing.current[1] = mesh}
-        visible={false}
-        position={getBasePosition(1, SIDES, RADIUS)}
-      >
-        <boxGeometry args={[2, 2, 2]} />
-        <meshNormalMaterial />
-      </mesh>
-      <mesh
-        ref={(mesh: THREE.Mesh) => availableMeshesRing.current[2] = mesh}
-        visible={false}
-        position={getBasePosition(2, SIDES, RADIUS)}
-      >
-        <boxGeometry args={[2, 2, 2]} />
-        <meshNormalMaterial />
-      </mesh>
-      <mesh
-        ref={(mesh: THREE.Mesh) => availableMeshesRing.current[3] = mesh}
-        visible={false}
-        position={getBasePosition(3, SIDES, RADIUS)}
-      >
-        <boxGeometry args={[2, 2, 2]} />
-        <meshNormalMaterial />
-      </mesh>
-      <mesh
-        ref={(mesh: THREE.Mesh) => availableMeshesRing.current[4] = mesh}
-        visible={false}
-        position={getBasePosition(4, SIDES, RADIUS)}
-      >
-        <boxGeometry args={[2, 2, 2]} />
-        <meshNormalMaterial />
-      </mesh>
-      <mesh
-        ref={(mesh: THREE.Mesh) => availableMeshesRing.current[5] = mesh}
-        visible={false}
-        position={getBasePosition(5, SIDES, RADIUS)}
-      >
-        <boxGeometry args={[2, 2, 2]} />
-        <meshNormalMaterial />
-      </mesh> */}
     </group>
   )
 }
