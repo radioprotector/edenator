@@ -1,26 +1,91 @@
 import { Reader } from "jsmediatags";
-import { TagType } from "jsmediatags/types";
+import { FrameType, TagType } from "jsmediatags/types";
 import Peak from "./Peak";
 import { TrackAnalysis } from "./TrackAnalysis";
 
+const ANALYZER_SAMPLE_RATE = 44100;
+
+/**
+ * Attempts to get all media tags for the specified file.
+ * @param file The file to open.
+ * @returns A promise to retrieve all tags for the file.
+ */
+ function getTrackTags(file: File): Promise<TagType> {
+  return new Promise((resolve, reject) => {
+    new Reader(file)
+      .read({
+        onSuccess: (tagData) => {
+          resolve(tagData)
+        },
+        onError: (error) => {
+          reject(error);
+        }
+      })
+  });
+}
+
+/**
+ * Attempts to retrieve a tag value that could reside in any number of standard or custom tag values.
+ * @param tagCollection The collection of tags to search through.
+ * @param standardTags The standard tags to search for, in priority order.
+ * @param customTagDescriptions The collection of user descriptions to search for, in priority order, in custom tags if no standard tags were found.
+ * @returns The specified tag and value, if found; otherwise, null.
+ */
+function findTagValue(tagCollection: TagType, standardTags: string[] | null, customTagDescriptions: string[] | null): FrameType | null {
+  // First check standard tags
+  if (standardTags !== null) {
+    for (let standardTagName of standardTags) {
+      if (standardTagName in tagCollection.tags) {
+        return tagCollection.tags[standardTagName];
+      }
+    }
+  }
+
+  // Then look for custom tags if any are defined
+  if (customTagDescriptions !== null) {
+    if ('TXXX' in tagCollection.tags) {
+      let customTags: FrameType[] = [];
+
+      // See if this is already an array
+      if (Array.isArray(tagCollection.tags['TXXX'])) {
+        customTags = tagCollection.tags['TXXX'];
+      }
+      else {
+        // Wrap the single tag in an array
+        customTags = [tagCollection.tags['TXXX']];
+      }
+
+      // Iterate through our custom descriptions
+      // XXX: This is technically quadratic but I don't know how long customTagDescriptions will be, realistically
+      for (let targetDescription of customTagDescriptions) {
+        for (let customTag of customTags) {
+          // In this case, the description and value we want is wrapped further in customTag.data
+          if ('user_description' in customTag.data && 'data' in customTag.data && customTag.data['user_description'] === targetDescription) {
+            return {
+              id: targetDescription,
+              description: targetDescription,
+              data: customTag.data['data']
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 function getBpmTagValue(tagCollection: TagType): number | null {
   // Look for, in order of preference: BPM, TBPM, TMPO
-  // FUTURE: Handle TXXX arrays and look for items where data.user_description === 'fBPM'
+  // In addition, we want to support fBPM as set by programs like Traktor
+  let bpmTag = findTagValue(tagCollection, ['BPM', 'TBPM', 'TMPO'], ['fBPM']);
   let bpmValue: any = '';
 
-  // console.trace(tagCollection.tags);
-
-  if ('BPM' in tagCollection.tags) {
-    bpmValue = tagCollection.tags['BPM'].data;
-  }
-  else if ('TBPM' in tagCollection.tags) {
-    bpmValue = tagCollection.tags['TBPM'].data;
-  }
-  else if ('TMPO' in tagCollection.tags) {
-    bpmValue = tagCollection.tags['TMPO'].data;
+  if (bpmTag === null) {
+    return null;
   }
   else {
-    return null;
+    bpmValue = bpmTag.data;
   }
 
   // Coalesce to a float value
@@ -37,26 +102,11 @@ function getBpmTagValue(tagCollection: TagType): number | null {
   }
 }
 
-async function getTrackTags(file: File): Promise<TagType> {
-  return new Promise((resolve, reject) => {
-    new Reader(file)
-      .read({
-        onSuccess: (tagData) => {
-          resolve(tagData)
-        },
-        onError: (error) => {
-          reject(error);
-        }
-      })
-  });
-}
-
-async function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, maxFrequency: number | null, expectedMaximumPeaksPerMinute: number): Promise<Peak[]> {
+function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, maxFrequency: number | null, expectedMaximumPeaksPerMinute: number): Promise<Peak[]> {
   // For processing, downmix to mono
   // HACK: Assume that the offline audio buffer length won't be any different from the bytebuffer length
   // XXX: Look at getting webkitOfflineAudioContext supported as well
-  const SAMPLE_RATE = 44100;
-  const audioContext = new window.OfflineAudioContext(1, audioData.byteLength, SAMPLE_RATE);
+  const audioContext = new window.OfflineAudioContext(1, audioData.byteLength, ANALYZER_SAMPLE_RATE);
   
   return audioContext.decodeAudioData(audioData)
     .then((decodedData: AudioBuffer) => {
@@ -99,7 +149,7 @@ async function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, max
         {
           // Start a new peak, and mark when it was encountered
           const newPeak = {
-            time: frameIdx / SAMPLE_RATE,
+            time: frameIdx / ANALYZER_SAMPLE_RATE,
             intensity: 0,
             frames: 1,
             end: 0 // To be calculated
@@ -116,13 +166,13 @@ async function getPeaks(audioData: ArrayBuffer, minFrequency: number | null, max
           } while(frameIdx < frames.length && Math.abs(frames[frameIdx]) >= INITIAL_THRESHOLD)
 
           // Now calculate the end of the peak
-          newPeak.end = frameIdx / SAMPLE_RATE;
+          newPeak.end = frameIdx / ANALYZER_SAMPLE_RATE;
 
           // Store the peak
           peaksList.push(newPeak);
 
-          // Move forward 1/32 seconds
-          frameIdx += Math.ceil(SAMPLE_RATE / 32);
+          // Move forward 1/32 of a second
+          frameIdx += Math.ceil(ANALYZER_SAMPLE_RATE / 32);
         }
 
         frameIdx++;
@@ -156,11 +206,12 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
   return Promise.all([tags, subBass, bass, beat, treble])
     .then((values): TrackAnalysis => {
       const [tagResult, subBassResult, bassResult, beatResult, trebleResult] = values;
+      const bpmFromTags = getBpmTagValue(tagResult);
 
       return {
         title: tagResult.tags.title ?? 'Unknown',
         artist: tagResult.tags.artist ?? 'Unknown',
-        bpm: getBpmTagValue(tagResult) ?? 120,
+        bpm: bpmFromTags ?? 120,
         subBass: subBassResult,
         bass: bassResult,
         beat: beatResult,
