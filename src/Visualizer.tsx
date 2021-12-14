@@ -28,18 +28,21 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
   const RADIUS = 5;
   const LOOKAHEAD_PERIOD = 2.0;
   const PEAK_DEPTH_START = -100;
-  const PEAK_DEPTH_END = 15;
+  const PEAK_DEPTH_END = 0;
+  const BASE_COLOR = new THREE.Color(0x770077);
+  const WHITE_COLOR = new THREE.Color(0xffffff);
 
   // Generate available meshes
   const availableMeshElements = 
-    generateNumericArray(SIDES * 4).map((sideNumber) => {
+    generateNumericArray(SIDES * 6).map((sideNumber) => {
       return <mesh
         ref={(mesh: THREE.Mesh) => availableMeshesRing.current[sideNumber] = mesh}
         visible={false}
         position={getBasePosition(sideNumber, SIDES, RADIUS)}
       >
-        <boxGeometry args={[2, 2, 2]} />
-        <meshPhongMaterial color={0xaa00aa} emissive={new THREE.Color(0xff00ff)} emissiveIntensity={0} />
+        <sphereGeometry />
+        {/* <boxGeometry args={[2, 2, 2]} /> */}
+        <meshPhongMaterial color={BASE_COLOR} emissive={WHITE_COLOR} emissiveIntensity={0} />
       </mesh>
     });
 
@@ -102,7 +105,8 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
       }
 
       const startRenderTime = Math.max(peakData.time - LOOKAHEAD_PERIOD, 0);
-      const endRenderTime = peakData.end + 1.0;
+      const startEmissiveTime = startRenderTime + ((peakData.time - startRenderTime) / 0.75);
+      const endRenderTime = peakData.end + 0.25;
 
       // See if we've finished peaking, which means we should hide the mesh
       if (startRenderTime > audioTime || endRenderTime < lastRenderTime) {
@@ -115,13 +119,14 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
       meshForPeak.position.z = THREE.MathUtils.lerp(PEAK_DEPTH_START, PEAK_DEPTH_END, (audioTime - startRenderTime) / (endRenderTime - startRenderTime));
 
       // Tweak the material if we're during the actual beat
-      if (audioTime > peakData.time) {
-        (meshForPeak.material as THREE.MeshPhongMaterial).emissiveIntensity = 1.0;
+      const material = (meshForPeak.material as THREE.MeshPhongMaterial);
+
+      if (audioTime >= startEmissiveTime && audioTime < peakData.end) {
+        material.emissiveIntensity = THREE.MathUtils.mapLinear(audioTime, startEmissiveTime, peakData.end, 0.0, 1.0);
       }
       else {
-        (meshForPeak.material as THREE.MeshPhongMaterial).emissiveIntensity = 0.0;
+        material.emissiveIntensity = 0.0;
       }
-
     }    
   });
 
@@ -183,7 +188,8 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
 function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
   return (
     <Canvas camera={{position: [0, 0, 15]}}>
-      <ambientLight />
+      <ambientLight intensity={0.1} />
+      <directionalLight position={[0, 0, 20]} />
       <PeakQueue audio={props.audio} peaks={props.trackAnalysis.beat} />
       {/* 
         These are just to help visualize positioned elements relative to the camera.
