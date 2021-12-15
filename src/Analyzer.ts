@@ -119,8 +119,40 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
     return audioContext.startRendering();
   })
   .then((renderedBuffer: AudioBuffer) => {
-    console.debug('volume analyzed', renderedBuffer);
-    return renderedBuffer.getChannelData(0);
+    const rawSamples = renderedBuffer.getChannelData(0);
+
+    // Convert the channel data to the equivalent volume
+    // Code based on https://webaudio.github.io/web-audio-api/#vu-meter-mode
+    const smoothedVolume = new Float32Array(rawSamples);
+    const SAMPLE_WINDOW = Math.floor(ANALYZER_SAMPLE_RATE / 50);
+    const DECAY_FACTOR = 0.9;
+    let volume = 0.0;
+
+    for (let frameIdx = 0; frameIdx < rawSamples.length; frameIdx = frameIdx + SAMPLE_WINDOW)
+    {
+      // Calculate RMS across the sample window
+      let sum = 0;
+      let rms = 0;
+      let windowedIndex = 0;
+
+      for (windowedIndex = 0; windowedIndex < SAMPLE_WINDOW && (frameIdx + windowedIndex) < rawSamples.length; windowedIndex++) {
+        sum += rawSamples[frameIdx + windowedIndex] * rawSamples[frameIdx + windowedIndex];
+      }
+
+      rms = Math.sqrt(sum / (windowedIndex + 1));
+
+      // Update the volume
+      volume = Math.max(rms, volume * DECAY_FACTOR);
+
+      // Fill our sample window with that smoothed volume
+      for (windowedIndex = 0; windowedIndex < SAMPLE_WINDOW && (frameIdx + windowedIndex) < rawSamples.length; windowedIndex++) {
+        smoothedVolume[frameIdx + windowedIndex] = volume;
+      }
+    }
+
+    console.debug('volume analyzed', renderedBuffer, smoothedVolume);
+
+    return smoothedVolume;
   });
 }
 
@@ -162,8 +194,8 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
       const frames = renderedBuffer.getChannelData(0);
       const peaksList: Peak[] = [];
       const peaksHistogram: { [roundedIntensity: string]: number } = {};
-      const ABSOLUTE_THRESHOLD = 0.5;
-      const RELATIVE_THRESHOLD = 0.65;
+      const ABSOLUTE_THRESHOLD = 0.4;
+      const RELATIVE_THRESHOLD = 0.5;
 
       for(let frameIdx = 0; frameIdx < frames.length;)
       {
