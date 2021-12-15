@@ -119,15 +119,15 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
     return audioContext.startRendering();
   })
   .then((renderedBuffer: AudioBuffer) => {
+    console.debug('volume analyzed', renderedBuffer);
     return renderedBuffer.getChannelData(0);
   });
 }
 
 function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFrequency: number | null, maxFrequency: number | null, expectedMaximumPeaksPerMinute: number): Promise<Peak[]> {
   // For processing, downmix to mono
-  // HACK: Assume that the offline audio buffer length won't be any different from the bytebuffer length
   // XXX: Look at getting webkitOfflineAudioContext supported as well
-  const audioContext = new window.OfflineAudioContext(1, overallVolume.byteLength, ANALYZER_SAMPLE_RATE);
+  const audioContext = new window.OfflineAudioContext(1, overallVolume.length, ANALYZER_SAMPLE_RATE);
   
   return audioContext.decodeAudioData(audioData)
     .then((decodedData: AudioBuffer) => {
@@ -158,16 +158,23 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
       return audioContext.startRendering();
     })
     .then((renderedBuffer: AudioBuffer) => {
-      // console.trace('audio rendered', { length: renderedBuffer.length, sampleRate: renderedBuffer.sampleRate, channels: renderedBuffer.numberOfChannels, duration: renderedBuffer.duration });
+      console.debug(`buffer for ${minFrequency} to ${maxFrequency}`, renderedBuffer);
       const frames = renderedBuffer.getChannelData(0);
       const peaksList: Peak[] = [];
+      const peaksHistogram: { [roundedIntensity: string]: number } = {};
       const ABSOLUTE_THRESHOLD = 0.5;
       const RELATIVE_THRESHOLD = 0.65;
 
       for(let frameIdx = 0; frameIdx < frames.length;)
       {
+        // Make sure we have audio data on this frame
+        if (overallVolume[frameIdx] === 0) {
+          frameIdx++;
+          continue;
+        }
+
         let currentFrameIntensity = Math.abs(frames[frameIdx]);
-        let currentFrameIntensityNormalized = currentFrameIntensity / Math.abs(overallVolume[frameIdx]);
+        let currentFrameIntensityNormalized = currentFrameIntensity / overallVolume[frameIdx];
 
         // See if we're ready to start a new peak
         if (currentFrameIntensity >= ABSOLUTE_THRESHOLD && currentFrameIntensityNormalized >= RELATIVE_THRESHOLD)
@@ -177,7 +184,7 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
             time: frameIdx / ANALYZER_SAMPLE_RATE,
             intensity: 0,
             intensityNormalized: 0,
-            frames: 1,
+            frames: 0,
             end: 0 // To be calculated
           };
 
@@ -188,17 +195,38 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
             newPeak.intensityNormalized = Math.max(newPeak.intensityNormalized, currentFrameIntensityNormalized)
             newPeak.frames++;
 
-            // Look at the next frame and recalculate the current intensity (both absolute and normalized)
+            // Look at the next frame.
+            // If we have audio data, recalculate the current intensity (both absolute and normalized)
+            // and see whether we can keep going
             frameIdx++;
+
+            if (frameIdx >= frames.length || overallVolume[frameIdx] === 0) {
+              break;
+            }
+
             currentFrameIntensity = Math.abs(frames[frameIdx]);
-            currentFrameIntensityNormalized = currentFrameIntensity / Math.abs(overallVolume[frameIdx]);
-          } while(frameIdx < frames.length && currentFrameIntensity >= ABSOLUTE_THRESHOLD && currentFrameIntensityNormalized >= RELATIVE_THRESHOLD)
+            currentFrameIntensityNormalized = currentFrameIntensity / overallVolume[frameIdx];
+
+            // if (currentFrameIntensityNormalized > 1) {
+            //   console.debug('INTENSITY OUT OF RANGE', { currentFrameIntensity, currentFrameIntensityNormalized });
+            // }
+          } while(currentFrameIntensity >= ABSOLUTE_THRESHOLD && currentFrameIntensityNormalized >= RELATIVE_THRESHOLD)
 
           // Now calculate the end of the peak
           newPeak.end = frameIdx / ANALYZER_SAMPLE_RATE;
 
           // Store the peak
           peaksList.push(newPeak);
+
+          // Update the histogram
+          const roundedIntensity = newPeak.intensityNormalized.toFixed(2);
+
+          if (roundedIntensity in peaksHistogram) {
+            peaksHistogram[roundedIntensity]++;
+          }
+          else {
+            peaksHistogram[roundedIntensity] = 1;
+          }
 
           // Move forward 1/32 of a second
           frameIdx += Math.ceil(ANALYZER_SAMPLE_RATE / 32);
@@ -207,18 +235,38 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
         frameIdx++;
       }
 
+      console.debug(`peak histogram for ${minFrequency} to ${maxFrequency}`, peaksHistogram);
+
       // See if we have too many peaks - if so, trim
       const expectedMaximumPeaks = Math.ceil(expectedMaximumPeaksPerMinute * renderedBuffer.duration / 60);
 
       if (peaksList.length > expectedMaximumPeaks) {
-        // Sort from least-intense to most-intense
-        peaksList.sort((a, b) => a.intensityNormalized - b.intensityNormalized);
+        // Look at the histogram to figure out the cutoff.
+        // Convert each truncated bucket back to its actual intensity float, and sort intensity in decreasing order
+        const sortedBuckets = Object.keys(peaksHistogram)
+          .map((k) => {
+            return { 
+              intensity: parseFloat(k), 
+              count: peaksHistogram[k]
+            };
+          })
+          .sort((a, b) => b.intensity - a.intensity);
 
-        // Remove the least-intense
-        peaksList.splice(0, peaksList.length - expectedMaximumPeaks);
+        // Start at the maximum intensity, and keep decreasing until we get more peaks
+        let intensityIndex = 0;
+        let intensityCutoff = sortedBuckets[0].intensity;
+        let totalPeaks = sortedBuckets[0].count;
 
-        // Restore implicit time-based sorting order
-        peaksList.sort((a, b) => a.time - b.time);
+        while(totalPeaks < expectedMaximumPeaks && intensityIndex < sortedBuckets.length - 1)
+        {
+          intensityIndex++;
+          intensityCutoff = sortedBuckets[intensityIndex].intensity;
+          totalPeaks += sortedBuckets[intensityIndex].count;
+        }
+
+        // Once we determine the cutoff, filter out elements that don't match
+        console.debug(`cutting off peaks for ${minFrequency} to ${maxFrequency} at ${intensityCutoff}`);
+        return peaksList.filter((p) => p.intensityNormalized >= intensityCutoff);
       }
 
       return peaksList;
