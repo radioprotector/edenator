@@ -44,11 +44,10 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
   const availableMeshesRing = useRef<THREE.Mesh[]>([]);
   const SIDES = 6;
   const RADIUS = 5;
-  const LOOKAHEAD_PERIOD = 2.0;
+  const LOOKAHEAD_PERIOD = 1.5;
   const PEAK_DEPTH_START = -200;
-  const PEAK_DEPTH_END = 0;
+  const PEAK_DEPTH_END = -10;
   const BASE_COLOR = new THREE.Color(0x770077);
-  const WHITE_COLOR = new THREE.Color(0xffffff);
 
   // Generate available meshes for use in a ring buffer
   const availableMeshElements = 
@@ -60,7 +59,7 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
         key={sideNumber}
       >
         <sphereGeometry />
-        <meshPhongMaterial color={BASE_COLOR} emissive={WHITE_COLOR} emissiveIntensity={0} />
+        <meshPhongMaterial color={BASE_COLOR} />
       </mesh>
     });
 
@@ -123,7 +122,7 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
       }
 
       const startRenderTime = Math.max(peakData.time - LOOKAHEAD_PERIOD, 0);
-      const startEmissiveTime = startRenderTime + ((peakData.time - startRenderTime) / 0.75);
+      const startEmissiveTime = startRenderTime + ((peakData.time - startRenderTime) * 0.5);
       const endRenderTime = peakData.end + 0.25;
 
       // See if we've finished peaking, which means we should hide the mesh
@@ -136,16 +135,23 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
       meshForPeak.visible = true;
       meshForPeak.position.z = THREE.MathUtils.lerp(PEAK_DEPTH_START, PEAK_DEPTH_END, (audioTime - startRenderTime) / (endRenderTime - startRenderTime));
 
-      // Tweak the material if we're during the actual beat
+      // Tweak properties if we're during the actual beat
       const material = (meshForPeak.material as THREE.MeshPhongMaterial);
 
       if (audioTime >= startEmissiveTime && audioTime < peakData.end) {
-        material.emissiveIntensity = THREE.MathUtils.mapLinear(audioTime, startEmissiveTime, peakData.end, 0.0, 1.0);
+        material.shininess = THREE.MathUtils.mapLinear(audioTime, startEmissiveTime, peakData.end, 0.5, 1.0);
       }
       else {
-        material.emissiveIntensity = 0.0;
+        material.shininess = 0.5;
       }
-    }    
+
+      if (audioTime >= peakData.time && audioTime < endRenderTime) {
+        meshForPeak.scale.setScalar(THREE.MathUtils.mapLinear(audioTime, peakData.time, endRenderTime, 1.0, 2.0));
+      }
+      else {
+        meshForPeak.scale.setScalar(1);
+      }
+    }
   });
 
   return (
