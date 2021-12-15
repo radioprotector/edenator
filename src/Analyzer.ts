@@ -104,12 +104,15 @@ function getBpmTagValue(tagCollection: TagType): number | null {
 
 function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
   // For processing, downmix to mono
-  // HACK: Assume that the offline audio buffer length won't be any different from the bytebuffer length
+  // HACK: We need to use one audio context just so we can decode the audio (and get the correct buffer length)
+  // After that, we use a *separate* audio context with the correct buffer length
   // XXX: Look at getting webkitOfflineAudioContext supported as well
-  const audioContext = new window.OfflineAudioContext(1, audioData.byteLength, ANALYZER_SAMPLE_RATE);
+  const dummyAudioContext = new window.OfflineAudioContext(1, ANALYZER_SAMPLE_RATE, ANALYZER_SAMPLE_RATE);
 
-  return audioContext.decodeAudioData(audioData)
+  return dummyAudioContext.decodeAudioData(audioData)
   .then((decodedData: AudioBuffer) => {
+    // console.debug('audio decoded', decodedData);
+    const audioContext = new window.OfflineAudioContext(1, decodedData.length, ANALYZER_SAMPLE_RATE);
     const bufferSource = audioContext.createBufferSource();
     bufferSource.buffer = decodedData;
 
@@ -119,6 +122,8 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
     return audioContext.startRendering();
   })
   .then((renderedBuffer: AudioBuffer) => {
+    // console.debug('volume analyzed', renderedBuffer);
+    // return renderedBuffer.getChannelData(0);
     const rawSamples = renderedBuffer.getChannelData(0);
 
     // Convert the channel data to the equivalent volume
