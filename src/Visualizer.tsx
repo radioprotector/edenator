@@ -38,7 +38,7 @@ function getBasePosition(sideIdx: number, totalSides: number, scale: number): TH
   return new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(scale);
 }
 
-function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] }) {
+function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, peaks: Peak[] }) {
   let nextUnrenderedPeakIndex = 0;
   let nextAvailableMeshIndex = 0;
   const availableMeshesRing = useRef<THREE.Mesh[]>([]);
@@ -63,13 +63,16 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
       </mesh>
     });
 
-  // Ensure we reset the next peak index when analysis changes
+  // Ensure we reset the next peak index when analysis changes (or we seeked).
+  // We're okay with just blowing away these values and letting useFrame re-calculate when it needs to
   useEffect(
     () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       nextUnrenderedPeakIndex = 0;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       nextAvailableMeshIndex = 0;
     },
-    [props.peaks]);
+    [props.peaks, props.audioLastSeeked]);
 
   useFrame((state, delta) => {
     if (props.audio.current === null || availableMeshesRing.current === null) {
@@ -267,7 +270,7 @@ function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
   );
 }
 
-function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
+function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis, audioLastSeeked: number }) {
   const sunMesh = useRef<THREE.Mesh>(null!);
   // const godRaysEffect = useRef<typeof GodRays>(null!);
 
@@ -283,7 +286,7 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         <sphereGeometry args={[5]} />
         <meshBasicMaterial color={0xffcc55} transparent={true} fog={false} />
       </mesh>
-      <PeakQueue audio={props.audio} peaks={props.trackAnalysis.beat} />
+      <PeakQueue audio={props.audio} peaks={props.trackAnalysis.beat} audioLastSeeked={props.audioLastSeeked} />
       <FrequencyGrid analyser={props.analyser} />
       {/* 
         These are just to help visualize positioned elements relative to the camera.

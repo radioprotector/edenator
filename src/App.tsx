@@ -6,10 +6,13 @@ import './App.css';
 import Visualizer from './Visualizer';
 
 function App(): JSX.Element {
-  // Keep track of what we played last
+  // Keep track of what we played last so we can free the object URL when switching tracks
   let playingFileUrl: string = '';
 
+  // Keep track of our current song analysis as well as a sentinel timestamp for when we've skipped around
+  // and need to ensure that all time-based queues are alerted
   const [currentAnalysis, updateCurrentAnalysis] = useState(EmptyTrackAnalysis);
+  const [audioLastSeeked, indicateAudioSeeked] = useState(0);
 
   // XXX: Investigate supprting webkitAudioContext
   const audioContext = useMemo(() => new AudioContext(), []);
@@ -66,6 +69,7 @@ function App(): JSX.Element {
 
           playingFileUrl = newAudioUrl;
           updateCurrentAnalysis(analyzerResult);
+          indicateAudioSeeked(Date.now());
         })
         .catch((reason: any) => {
           console.error(reason);
@@ -80,15 +84,21 @@ function App(): JSX.Element {
     }
   };
 
+  // When the audio track changes position abnormally, we need to re-set time-based indices
+  const onAudioSeeked = () => {
+    // console.debug('audio seek');
+    indicateAudioSeeked(Date.now());
+  };
+
   return (
     <div>
       <label htmlFor="sourceFile">
         Choose an audio file
         <input type="file" ref={sourceFileElement} id="sourceFile" accept="audio/*" onChange={selectedFileChange} />
       </label>
-      <audio ref={audioPlayerRef} id="audioPlayer" controls></audio>
+      <audio ref={audioPlayerRef} id="audioPlayer" onSeeked={onAudioSeeked} controls></audio>
       <div id="canvas-container">
-        <Visualizer audio={audioPlayerElement} analyser={audioAnalyser} trackAnalysis={currentAnalysis} />
+        <Visualizer audio={audioPlayerElement} analyser={audioAnalyser} trackAnalysis={currentAnalysis} audioLastSeeked={audioLastSeeked} />
       </div>
     </div>
   );
