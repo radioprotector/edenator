@@ -1,11 +1,26 @@
-import { RefObject, useEffect, useRef } from 'react';
+import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, Object3DNode, useFrame } from '@react-three/fiber';
 import { Bloom, EffectComposer, GodRays } from '@react-three/postprocessing';
 import { BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
 import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
+import { LineBasicMaterial } from 'three';
+
+// HACK: Work around namespace issue (THREE.Line is not in the typings, and <line> is interpreted as an SVG line element)
+// https://github.com/pmndrs/react-three-fiber/issues/172
+// https://github.com/pmndrs/react-three-fiber/issues/1152
+declare type LineProps = Object3DNode<THREE.Line, typeof THREE.Line>;
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      threeLine: LineProps
+    }
+  }
+}
+
 
 function generateNumericArray(total: number) {
   return Array.from(Array(total).keys());
@@ -30,7 +45,7 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
   const SIDES = 6;
   const RADIUS = 5;
   const LOOKAHEAD_PERIOD = 2.0;
-  const PEAK_DEPTH_START = -100;
+  const PEAK_DEPTH_START = -200;
   const PEAK_DEPTH_END = 0;
   const BASE_COLOR = new THREE.Color(0x770077);
   const WHITE_COLOR = new THREE.Color(0xffffff);
@@ -42,6 +57,7 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
         ref={(mesh: THREE.Mesh) => availableMeshesRing.current[sideNumber] = mesh}
         visible={false}
         position={getBasePosition(sideNumber, SIDES, RADIUS)}
+        key={sideNumber}
       >
         <sphereGeometry />
         <meshPhongMaterial color={BASE_COLOR} emissive={WHITE_COLOR} emissiveIntensity={0} />
@@ -139,9 +155,115 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, peaks: Peak[] })
   )
 }
 
+function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
+  // We're using two extra "buckets" to anchor it at the beginning
+  const BUCKETS = 64;
+  const HORIZONTAL_SCALE = 0.5;
+  const VERTICAL_SCALE = 5.0;
+  // const line = useRef<THREE.Line>(null!);
+
+  // Construct the set of points
+  const pointSet = useMemo(() => {
+    const points: THREE.Vector3[] = [];
+
+    // Insert four special points at the beginning to anchor it
+    points.push(new THREE.Vector3(BUCKETS * -1 * HORIZONTAL_SCALE, 0, 0));
+    points.push(new THREE.Vector3(BUCKETS * -0.875 * HORIZONTAL_SCALE, 0, 0));
+    points.push(new THREE.Vector3(BUCKETS * -0.75 * HORIZONTAL_SCALE, 0, 0));
+    points.push(new THREE.Vector3(BUCKETS * -0.625 * HORIZONTAL_SCALE, 0, 0));
+
+    for(let i = 0; i < BUCKETS; i++) {
+      points.push(new THREE.Vector3((i - (BUCKETS / 2)) * HORIZONTAL_SCALE, 0, 0));
+    }
+
+    // Similarly, insert four anchors at the end
+    points.push(new THREE.Vector3(BUCKETS * 0.625 * HORIZONTAL_SCALE, 0, 0));
+    points.push(new THREE.Vector3(BUCKETS * 0.75 * HORIZONTAL_SCALE, 0, 0));
+    points.push(new THREE.Vector3(BUCKETS * 0.875 * HORIZONTAL_SCALE, 0, 0));
+    points.push(new THREE.Vector3(BUCKETS * HORIZONTAL_SCALE, 0, 0));
+
+    return points;
+  }, []);
+
+  // Construct the geometry from those points
+  const frequencyGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setFromPoints(pointSet);
+    return geometry;
+  }, [pointSet]);
+
+  // Construct multiple lines from the geometry
+  const frontLine = useMemo(() => {
+    return new THREE.Line(frequencyGeometry, new LineBasicMaterial({color: 0xaa00aa}));
+  }, [frequencyGeometry]);
+
+  const secondLine = useMemo(() => {
+    return new THREE.Line(frequencyGeometry, new LineBasicMaterial({color: 0x550055}));
+  }, [frequencyGeometry]);
+
+  const thirdLine = useMemo(() => {
+    return new THREE.Line(frequencyGeometry, new LineBasicMaterial({color: 0x220022}));
+  }, [frequencyGeometry]);
+
+  useFrame((state, delta) => {
+    if (props.analyser.current === null) {
+      return;
+    }
+
+    const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
+    props.analyser.current.getByteFrequencyData(frequencies);
+
+    // Skip over the four anchor points at the beginning and the four anchor points at the end
+    for(let i = 4; i < frequencies.length && i < pointSet.length - 4; i++) {
+      pointSet[i].y = (frequencies[i] / 255.0) * VERTICAL_SCALE;
+    }
+
+    // Use the anchor points to scale down the edge exponentially
+    const firstFrequency = (frequencies[0] / 255.0) * VERTICAL_SCALE;
+    const lastFrequency = (frequencies[frequencies.length - 1] / 255.0) * VERTICAL_SCALE;
+
+    pointSet[3].y = firstFrequency * 0.75;
+    pointSet[2].y = firstFrequency * 0.5625;
+    pointSet[1].y = firstFrequency * 0.42;
+
+    pointSet[BUCKETS].y = lastFrequency * 0.75;
+    pointSet[BUCKETS+1].y = lastFrequency * 0.5625;
+    pointSet[BUCKETS+2].y = lastFrequency * 0.42;
+
+    frontLine.geometry.setFromPoints(pointSet);
+    frontLine.geometry.computeBoundingBox();
+
+    secondLine.geometry.setFromPoints(pointSet);
+    secondLine.geometry.computeBoundingBox();
+
+    thirdLine.geometry.setFromPoints(pointSet);
+    thirdLine.geometry.computeBoundingBox();
+  });
+
+  return (
+    <group>
+      <primitive 
+        object={frontLine} 
+        position={[0, -10, -10]} 
+        scale={[0.5, 1.0, 1.0]} 
+      />
+      <primitive 
+        object={secondLine} 
+        position={[0, -10, -30]} 
+        scale={[0.45, 1.0, 1.0]} 
+      />
+      <primitive 
+        object={thirdLine} 
+        position={[0, -10, -50]} 
+        scale={[0.4, 1.0, 1.0]} 
+      />
+    </group>
+  );
+}
+
 function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
   const sunMesh = useRef<THREE.Mesh>(null!);
-  const godRaysEffect = useRef<typeof GodRays>(null!);
+  // const godRaysEffect = useRef<typeof GodRays>(null!);
 
   return (
     <Canvas camera={{position: [0, 0, 15]}}>
@@ -156,6 +278,7 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         <meshBasicMaterial color={0xffcc55} transparent={true} fog={false} />
       </mesh>
       <PeakQueue audio={props.audio} peaks={props.trackAnalysis.beat} />
+      <FrequencyGrid analyser={props.analyser} />
       {/* 
         These are just to help visualize positioned elements relative to the camera.
           o Red - x
