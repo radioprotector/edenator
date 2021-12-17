@@ -1,26 +1,11 @@
 import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { Canvas, Object3DNode, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Bloom, EffectComposer, GodRays } from '@react-three/postprocessing';
 import { BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
 import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
-import { LineBasicMaterial } from 'three';
-
-// HACK: Work around namespace issue (THREE.Line is not in the typings, and <line> is interpreted as an SVG line element)
-// https://github.com/pmndrs/react-three-fiber/issues/172
-// https://github.com/pmndrs/react-three-fiber/issues/1152
-declare type LineProps = Object3DNode<THREE.Line, typeof THREE.Line>;
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      threeLine: LineProps
-    }
-  }
-}
-
 
 function generateNumericArray(total: number) {
   return Array.from(Array(total).keys());
@@ -165,31 +150,35 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
 }
 
 function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
-  // We're using two extra "buckets" to anchor it at the beginning
-  const BUCKETS = 64;
-  const HORIZONTAL_SCALE = 0.5;
-  const VERTICAL_SCALE = 5.0;
-  // const line = useRef<THREE.Line>(null!);
+  // Track how many rows we have, where the first row starts, depth-wise, and the spacing between each row  
+  const FREQUENCY_ROWS: number = 10;
+  const STARTING_DEPTH: number = -10;
+  const DEPTH_SPACING: number = -20;
 
-  // Construct the set of points
+  // XXX: LINE_BUCKETS should be equal to analyzer.frequencyBinCount
+  const LINE_BUCKETS = 64;
+  const BUCKET_WIDTH = 0.5;
+  const BUCKET_HEIGHT = 5.0;
+
+  // Construct the set of points to use for each line
   const pointSet = useMemo(() => {
     const points: THREE.Vector3[] = [];
 
-    // Insert four special points at the beginning to anchor it
-    points.push(new THREE.Vector3(BUCKETS * -1 * HORIZONTAL_SCALE, 0, 0));
-    points.push(new THREE.Vector3(BUCKETS * -0.875 * HORIZONTAL_SCALE, 0, 0));
-    points.push(new THREE.Vector3(BUCKETS * -0.75 * HORIZONTAL_SCALE, 0, 0));
-    points.push(new THREE.Vector3(BUCKETS * -0.625 * HORIZONTAL_SCALE, 0, 0));
+    // Insert four special points at the beginning to anchor it so that "cliffs" aren't as sharp on the end
+    points.push(new THREE.Vector3(LINE_BUCKETS * -1 * BUCKET_WIDTH, 0, 0));
+    points.push(new THREE.Vector3(LINE_BUCKETS * -0.875 * BUCKET_WIDTH, 0, 0));
+    points.push(new THREE.Vector3(LINE_BUCKETS * -0.75 * BUCKET_WIDTH, 0, 0));
+    points.push(new THREE.Vector3(LINE_BUCKETS * -0.625 * BUCKET_WIDTH, 0, 0));
 
-    for(let i = 0; i < BUCKETS; i++) {
-      points.push(new THREE.Vector3((i - (BUCKETS / 2)) * HORIZONTAL_SCALE, 0, 0));
+    for(let i = 0; i < LINE_BUCKETS; i++) {
+      points.push(new THREE.Vector3((i - (LINE_BUCKETS / 2)) * BUCKET_WIDTH, 0, 0));
     }
 
     // Similarly, insert four anchors at the end
-    points.push(new THREE.Vector3(BUCKETS * 0.625 * HORIZONTAL_SCALE, 0, 0));
-    points.push(new THREE.Vector3(BUCKETS * 0.75 * HORIZONTAL_SCALE, 0, 0));
-    points.push(new THREE.Vector3(BUCKETS * 0.875 * HORIZONTAL_SCALE, 0, 0));
-    points.push(new THREE.Vector3(BUCKETS * HORIZONTAL_SCALE, 0, 0));
+    points.push(new THREE.Vector3(LINE_BUCKETS * 0.625 * BUCKET_WIDTH, 0, 0));
+    points.push(new THREE.Vector3(LINE_BUCKETS * 0.75 * BUCKET_WIDTH, 0, 0));
+    points.push(new THREE.Vector3(LINE_BUCKETS * 0.875 * BUCKET_WIDTH, 0, 0));
+    points.push(new THREE.Vector3(LINE_BUCKETS * BUCKET_WIDTH, 0, 0));
 
     return points;
   }, []);
@@ -202,17 +191,25 @@ function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
   }, [pointSet]);
 
   // Construct multiple lines from the geometry
-  const frontLine = useMemo(() => {
-    return new THREE.Line(frequencyGeometry, new LineBasicMaterial({color: 0xaa00aa}));
-  }, [frequencyGeometry]);
+  const rowLines = useRef<THREE.Line[]>([]);
+  const rowElements = useMemo(() => {
+    const lineMaterial = new THREE.LineBasicMaterial({color: 0xaa00aa});
 
-  const secondLine = useMemo(() => {
-    return new THREE.Line(frequencyGeometry, new LineBasicMaterial({color: 0x550055}));
-  }, [frequencyGeometry]);
+    return generateNumericArray(FREQUENCY_ROWS).map((rowIndex) => {
+      const line = new THREE.Line(frequencyGeometry, lineMaterial);
+      line.position.set(0, -10, STARTING_DEPTH + (DEPTH_SPACING * rowIndex));
+      line.scale.set(0.6, THREE.MathUtils.mapLinear(rowIndex, 0, FREQUENCY_ROWS - 1, 1.0, 0.1), 1.0);
 
-  const thirdLine = useMemo(() => {
-    return new THREE.Line(frequencyGeometry, new LineBasicMaterial({color: 0x220022}));
-  }, [frequencyGeometry]);
+      // Ensure the line is stored in a mesh
+      rowLines.current[rowIndex] = line;
+
+      // Convert the line to the equivalent JSX element
+      return <primitive 
+        object={line}
+        key={rowIndex}
+      />
+    })
+    }, [frequencyGeometry, STARTING_DEPTH, DEPTH_SPACING, FREQUENCY_ROWS]);
 
   useFrame((state, delta) => {
     if (props.analyser.current === null) {
@@ -224,48 +221,31 @@ function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
 
     // Skip over the four anchor points at the beginning and the four anchor points at the end
     for(let i = 4; i < frequencies.length && i < pointSet.length - 4; i++) {
-      pointSet[i].y = (frequencies[i] / 255.0) * VERTICAL_SCALE;
+      pointSet[i].y = (frequencies[i] / 255.0) * BUCKET_HEIGHT;
     }
 
-    // Use the anchor points to scale down the edge exponentially
-    const firstFrequency = (frequencies[0] / 255.0) * VERTICAL_SCALE;
-    const lastFrequency = (frequencies[frequencies.length - 1] / 255.0) * VERTICAL_SCALE;
+    // Use the anchor points to scale down the edges
+    const firstFrequency = (frequencies[0] / 255.0) * BUCKET_HEIGHT;
+    const lastFrequency = (frequencies[frequencies.length - 1] / 255.0) * BUCKET_HEIGHT;
 
     pointSet[3].y = firstFrequency * 0.75;
     pointSet[2].y = firstFrequency * 0.5625;
     pointSet[1].y = firstFrequency * 0.42;
 
-    pointSet[BUCKETS].y = lastFrequency * 0.75;
-    pointSet[BUCKETS+1].y = lastFrequency * 0.5625;
-    pointSet[BUCKETS+2].y = lastFrequency * 0.42;
+    pointSet[LINE_BUCKETS].y = lastFrequency * 0.75;
+    pointSet[LINE_BUCKETS+1].y = lastFrequency * 0.5625;
+    pointSet[LINE_BUCKETS+2].y = lastFrequency * 0.42;
 
-    frontLine.geometry.setFromPoints(pointSet);
-    frontLine.geometry.computeBoundingBox();
-
-    secondLine.geometry.setFromPoints(pointSet);
-    secondLine.geometry.computeBoundingBox();
-
-    thirdLine.geometry.setFromPoints(pointSet);
-    thirdLine.geometry.computeBoundingBox();
+    // Apply this point set to all meshes
+    for(let rowIdx = 0; rowIdx < rowLines.current.length; rowIdx++) {
+      rowLines.current[rowIdx].geometry.setFromPoints(pointSet);
+      rowLines.current[rowIdx].geometry.computeBoundingBox();
+    }
   });
 
   return (
     <group>
-      <primitive 
-        object={frontLine} 
-        position={[0, -10, -10]} 
-        scale={[0.5, 1.0, 1.0]} 
-      />
-      <primitive 
-        object={secondLine} 
-        position={[0, -10, -30]} 
-        scale={[0.45, 1.0, 1.0]} 
-      />
-      <primitive 
-        object={thirdLine} 
-        position={[0, -10, -50]} 
-        scale={[0.4, 1.0, 1.0]} 
-      />
+      {rowElements}
     </group>
   );
 }
