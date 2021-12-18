@@ -2,10 +2,11 @@ import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Bloom, EffectComposer, GodRays } from '@react-three/postprocessing';
-import { BlendFunction, Resizer, KernelSize } from 'postprocessing';
+import { GodRaysEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
 import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
+import { MeshBasicMaterial, SphereGeometry } from 'three';
 
 function generateNumericArray(total: number) {
   return Array.from(Array(total).keys());
@@ -275,22 +276,68 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   );
 }
 
+function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }) {
+  const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
+  
+  useFrame((state, delta) => {
+    if (props.audio.current === null || props.audio.current.currentTime <= 0 || props.analyser.current === null || godRaysEffect.current === null) {
+      return;
+    }
+
+    const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
+    props.analyser.current.getByteFrequencyData(frequencies);
+
+    if (Number.isFinite(frequencies[5])) {
+      // HACK: Party on the GodRaysMaterial and adjust values based on our frequency
+      // https://vanruesc.github.io/postprocessing/public/docs/file/src/effects/GodRaysEffect.js.html
+      const godRaysMaterial = godRaysEffect.current.godRaysPass.getFullscreenMaterial();
+      const godRaysScale = frequencies[5] / 255.0;
+
+      godRaysMaterial.uniforms.decay.value = THREE.MathUtils.lerp(0.4, 0.93, godRaysScale);
+      godRaysMaterial.uniforms.exposure.value = THREE.MathUtils.lerp(0.4, 0.85, godRaysScale);
+    }
+  });
+
+  return (
+    <EffectComposer>
+      <Bloom
+        intensity={1}
+        width={Resizer.AUTO_SIZE}
+        height={Resizer.AUTO_SIZE}
+        kernelSize={KernelSize.MEDIUM}
+        luminanceThreshold={0.4}
+        luminanceSmoothing={0.1}
+      />
+      <GodRays
+        ref={godRaysEffect}
+        sun={props.sunMesh}
+        blur={10}
+        blendFunction={BlendFunction.Screen}
+        samples={60}
+        density={0.85}
+        decay={0.85}
+        weight={0.4}
+        exposure={0.9}
+        clampMax={1}
+        width={Resizer.AUTO_SIZE}
+        height={Resizer.AUTO_SIZE}
+        kernelSize={KernelSize.MEDIUM}
+      />
+    </EffectComposer>
+  )
+}
+
 function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis, audioLastSeeked: number }) {
-  const sunMesh = useRef<THREE.Mesh>(null!);
-  // const godRaysEffect = useRef<typeof GodRays>(null!);
+  // Create the sun mesh ahead of time so that we don't have to muck around with refs when passing it to the VFX manager
+  const sunMesh = new THREE.Mesh(new SphereGeometry(5), new MeshBasicMaterial({color: 0xffcc55, transparent: true, fog: false}));
+  sunMesh.frustumCulled = false;
+  sunMesh.position.set(0, 0, -200);
 
   return (
     <Canvas camera={{position: [0, 0, 15]}}>
       <ambientLight intensity={0.1} />
       <directionalLight position={[0, 0, 20]} />
-      <mesh 
-        ref={sunMesh}
-        frustumCulled={false}
-        position={[0, 0, -200]}
-      >
-        <sphereGeometry args={[5]} />
-        <meshBasicMaterial color={0xffcc55} transparent={true} fog={false} />
-      </mesh>
+      <primitive object={sunMesh} />
       <PeakQueue audio={props.audio} peaks={props.trackAnalysis.beat} audioLastSeeked={props.audioLastSeeked} />
       <FrequencyGrid audio={props.audio} analyser={props.analyser} trackAnalysis={props.trackAnalysis} />
       {/* 
@@ -324,30 +371,7 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         <sphereGeometry />
         <meshBasicMaterial color={0xff0000} />
       </mesh> */}
-      <EffectComposer>
-        <Bloom
-          intensity={0.5}
-          width={Resizer.AUTO_SIZE}
-          height={Resizer.AUTO_SIZE}
-          kernelSize={KernelSize.LARGE}
-          luminanceThreshold={0.5}
-          luminanceSmoothing={0.025}
-        />
-        {sunMesh.current && 
-          <GodRays 
-            sun={sunMesh.current}
-            blendFunction={BlendFunction.Screen}
-            samples={60}
-            density={0.96}
-            decay={0.9}
-            weight={0.4}
-            exposure={0.6}
-            clampMax={1}
-            width={Resizer.AUTO_SIZE}
-            height={Resizer.AUTO_SIZE}
-            kernelSize={KernelSize.SMALL}
-          />}
-      </EffectComposer>
+      <VfxManager audio={props.audio} analyser={props.analyser} sunMesh={sunMesh} />
     </Canvas>
   );
 }
