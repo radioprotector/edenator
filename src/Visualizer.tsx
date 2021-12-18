@@ -290,21 +290,26 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
 
     // Adjust the intensity of the noise based on low frequencies
     if (Number.isFinite(frequencies[0])) {
-      noiseEffect.current.blendMode.opacity.value = THREE.MathUtils.lerp(0.0, 0.05, frequencies[0] / 255.0);
+      noiseEffect.current.blendMode.opacity.value = THREE.MathUtils.lerp(0.0, 0.03, frequencies[0] / 255.0);
     }
     else {
       noiseEffect.current.blendMode.opacity.value = 0.0;
     }
 
     // Pulse the intensity of the god rays based on low-mid frequencies
+    // HACK: Party on the GodRaysMaterial and adjust values based on our frequency
+    // https://vanruesc.github.io/postprocessing/public/docs/file/src/effects/GodRaysEffect.js.html
+    const godRaysMaterial = godRaysEffect.current.godRaysPass.getFullscreenMaterial();
+    
     if (Number.isFinite(frequencies[5])) {
-      // HACK: Party on the GodRaysMaterial and adjust values based on our frequency
-      // https://vanruesc.github.io/postprocessing/public/docs/file/src/effects/GodRaysEffect.js.html
-      const godRaysMaterial = godRaysEffect.current.godRaysPass.getFullscreenMaterial();
       const godRaysScale = frequencies[5] / 255.0;
 
       godRaysMaterial.uniforms.decay.value = THREE.MathUtils.lerp(0.4, 0.93, godRaysScale);
       godRaysMaterial.uniforms.exposure.value = THREE.MathUtils.lerp(0.4, 0.85, godRaysScale);
+    }
+    else {
+      godRaysMaterial.uniforms.decay.value = 0.4;
+      godRaysMaterial.uniforms.exposure.value = 0.4;
     }
 
     // Scale the intensity of the color "bitcrush" based on the upper frequency ranges
