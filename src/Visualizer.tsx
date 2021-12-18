@@ -1,8 +1,8 @@
 import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { EffectComposer, Bloom, GodRays, ColorDepth } from '@react-three/postprocessing';
-import { GodRaysEffect, ColorDepthEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
+import { EffectComposer, Bloom, GodRays, ColorDepth, Noise } from '@react-three/postprocessing';
+import { GodRaysEffect, ColorDepthEffect, NoiseEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
 import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
@@ -279,6 +279,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
 function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }) {
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
   const colorDepthEffect = useRef<typeof ColorDepthEffect>(null!);
+  const noiseEffect = useRef<typeof NoiseEffect>(null!);
   
   useFrame((state, delta) => {
     if (props.audio.current === null || props.audio.current.currentTime <= 0 || props.analyser.current === null || godRaysEffect.current === null) {
@@ -288,6 +289,15 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
     const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
     props.analyser.current.getByteFrequencyData(frequencies);
 
+    // Adjust the intensity of the noise based on low frequencies
+    if (Number.isFinite(frequencies[0])) {
+      noiseEffect.current.blendMode.opacity.value = THREE.MathUtils.lerp(0.0, 0.05, frequencies[0] / 255.0);
+    }
+    else {
+      noiseEffect.current.blendMode.opacity.value = 0.0;
+    }
+
+    // Pulse the intensity of the god rays based on low-mid frequencies
     if (Number.isFinite(frequencies[5])) {
       // HACK: Party on the GodRaysMaterial and adjust values based on our frequency
       // https://vanruesc.github.io/postprocessing/public/docs/file/src/effects/GodRaysEffect.js.html
@@ -303,7 +313,9 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
     let upperFrequencyAverage = 0.0;
 
     for (let frequencyBinIndex = frequencies.length - upperFrequenciesSize; frequencyBinIndex < frequencies.length; frequencyBinIndex++) {
-      upperFrequencyAverage += frequencies[frequencyBinIndex];
+      if (Number.isFinite(frequencies[frequencyBinIndex])) {
+        upperFrequencyAverage += frequencies[frequencyBinIndex];
+      }
     }
 
     colorDepthEffect.current.blendMode.opacity.value = THREE.MathUtils.lerp(0.0, 0.5, upperFrequencyAverage / (upperFrequenciesSize * 255.0));
@@ -337,6 +349,10 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       <ColorDepth
         ref={colorDepthEffect}
         bits={4}
+        opacity={0.0}
+      />
+      <Noise
+        ref={noiseEffect}
         opacity={0.0}
       />
     </EffectComposer>
