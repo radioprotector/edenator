@@ -6,7 +6,6 @@ import { GodRaysEffect, ColorDepthEffect, NoiseEffect, BlendFunction, Resizer, K
 
 import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
-import { MeshBasicMaterial, SphereGeometry } from 'three';
 
 function generateNumericArray(total: number) {
   return Array.from(Array(total).keys());
@@ -361,7 +360,7 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
 
 function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis, audioLastSeeked: number }) {
   // Create the sun mesh ahead of time so that we don't have to muck around with refs when passing it to the VFX manager
-  const sunMesh = new THREE.Mesh(new SphereGeometry(5), new MeshBasicMaterial({color: 0xffcc55, transparent: true, fog: false}));
+  const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(5), new THREE.MeshBasicMaterial({color: 0xffcc55, transparent: true, fog: false}));
   sunMesh.frustumCulled = false;
   sunMesh.position.set(0, 0, -200);
 
