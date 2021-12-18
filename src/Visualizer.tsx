@@ -149,7 +149,7 @@ function PeakQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
   )
 }
 
-function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
+function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
   // Track how many rows we have, where the first row starts, depth-wise, and the spacing between each row  
   const FREQUENCY_ROWS: number = 10;
   const STARTING_DEPTH: number = -10;
@@ -159,6 +159,13 @@ function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
   const LINE_BUCKETS = 64;
   const BUCKET_WIDTH = 0.5;
   const BUCKET_HEIGHT = 5.0;
+
+  // Calculate the number of seconds per measure
+  const secondsPerMeasure = useMemo(() => {
+    // Assuming 4 beats per measure, BPM / 4 => measures/minute / 60 => BPM/240 for measures per second
+    // Use the inverse to get seconds per measure
+    return 240 / props.trackAnalysis.bpm;
+  }, [props.trackAnalysis])
 
   // Construct the set of points to use for each line
   const pointSet = useMemo(() => {
@@ -212,7 +219,7 @@ function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
     }, [frequencyGeometry, STARTING_DEPTH, DEPTH_SPACING, FREQUENCY_ROWS]);
 
   useFrame((state, delta) => {
-    if (props.analyser.current === null) {
+    if (props.analyser.current === null || props.audio.current === null) {
       return;
     }
 
@@ -236,10 +243,28 @@ function FrequencyGrid(props: { analyser: RefObject<AnalyserNode> }) {
     pointSet[LINE_BUCKETS+1].y = lastFrequency * 0.5625;
     pointSet[LINE_BUCKETS+2].y = lastFrequency * 0.42;
 
-    // Apply this point set to all meshes
-    for(let rowIdx = 0; rowIdx < rowLines.current.length; rowIdx++) {
-      rowLines.current[rowIdx].geometry.setFromPoints(pointSet);
-      rowLines.current[rowIdx].geometry.computeBoundingBox();
+    // Calculate how much of the measure, by percentage has elapsed by now
+    let measurePercentage = 0;
+
+    if (props.audio.current.currentTime > 0) {
+      measurePercentage = (props.audio.current.currentTime % secondsPerMeasure) / secondsPerMeasure;
+    }
+
+    // Update all of the rows
+    for(let rowIndex = 0; rowIndex < rowLines.current.length; rowIndex++) {
+      // Apply the point set to all line rows
+      const lineRow = rowLines.current[rowIndex];
+      const baseDepth = STARTING_DEPTH + (DEPTH_SPACING * rowIndex);
+
+      lineRow.geometry.setFromPoints(pointSet);
+      lineRow.geometry.computeBoundingBox();
+
+      if (props.audio.current.currentTime > 0) {
+        lineRow.position.z = baseDepth - (DEPTH_SPACING * measurePercentage);
+      }
+      else {
+        lineRow.position.z = baseDepth;
+      }
     }
   });
 
@@ -267,7 +292,7 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         <meshBasicMaterial color={0xffcc55} transparent={true} fog={false} />
       </mesh>
       <PeakQueue audio={props.audio} peaks={props.trackAnalysis.beat} audioLastSeeked={props.audioLastSeeked} />
-      <FrequencyGrid analyser={props.analyser} />
+      <FrequencyGrid audio={props.audio} analyser={props.analyser} trackAnalysis={props.trackAnalysis} />
       {/* 
         These are just to help visualize positioned elements relative to the camera.
           o Red - x

@@ -6,7 +6,7 @@ export interface TrackAnalysis
 
   artist: string;
 
-  bpm: Number;
+  bpm: number;
 
   subBass: Peak[];
 
