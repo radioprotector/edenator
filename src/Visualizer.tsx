@@ -308,7 +308,7 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
     }
 
     // Scale the intensity of the color "bitcrush" based on the upper frequency ranges
-    let upperFrequenciesSize = Math.ceil(frequencies.length / 2);
+    let upperFrequenciesSize = Math.ceil(frequencies.length / 4);
     let upperFrequencyAverage = 0.0;
 
     for (let frequencyBinIndex = frequencies.length - upperFrequenciesSize; frequencyBinIndex < frequencies.length; frequencyBinIndex++) {
