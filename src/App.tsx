@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useMemo } from 'react';
+import React, { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 import { analyzeTrack } from './Analyzer';
 import { EmptyTrackAnalysis, TrackAnalysis } from './TrackAnalysis';
 
@@ -89,6 +89,16 @@ function App(): JSX.Element {
     // console.debug('audio seek');
     indicateAudioSeeked(Date.now());
   };
+
+  // Update the page title based on the currently playing song
+  useEffect(() => {
+    if (currentAnalysis !== null && currentAnalysis.artist !== '' && currentAnalysis.title !== '') {
+      document.title = `Edenator (${currentAnalysis.artist} - ${currentAnalysis.title})`;
+    }
+    else {
+      document.title = 'Edenator';
+    }
+  }, [currentAnalysis])
 
   return (
     <div>
