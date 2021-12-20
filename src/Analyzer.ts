@@ -324,14 +324,16 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
       const [tagResult, subBassResult, bassResult, beatResult, trebleResult] = values;
       const bpmFromTags = getBpmTagValue(tagResult);
 
-      return {
-        title: tagResult.tags.title ?? 'Unknown',
-        artist: tagResult.tags.artist ?? 'Unknown',
-        bpm: bpmFromTags ?? 120,
-        subBass: subBassResult,
-        bass: bassResult,
-        beat: beatResult,
-        treble: trebleResult
-      };
+      const analysis = new TrackAnalysis()
+      analysis.title = tagResult.tags.title ?? 'Unknown Title';
+      analysis.artist = tagResult.tags.artist ?? 'Unknown Artist';
+      analysis.bpm = bpmFromTags ?? 120;
+      analysis.subBass = subBassResult;
+      analysis.bass = bassResult;
+      analysis.beat = beatResult;
+      analysis.treble = trebleResult;
+      analysis.trackHash = Math.floor(file.lastModified + file.size);
+
+      return analysis;
     });
 }
