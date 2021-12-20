@@ -289,6 +289,107 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   );
 }
 
+function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
+  const START_DEPTH = -10;
+  const LEFT_OFFSET = -15;
+  const lineColor = new THREE.Color(0x8f074b);
+  const filled = new THREE.MeshBasicMaterial({ color: 0x850707 });
+
+  // When we normally try to display a standard box geometry using wireframes,
+  // it will display each side using two triangles. We want pure lines,
+  // so we'll use a set of lines (with appropriate scaling) to approximate quads.
+  const boxLineGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry();
+
+    geometry.setFromPoints([
+      // Right line, front face
+      new THREE.Vector3(0.5, -0.5, 0.5),
+      new THREE.Vector3(0.5, 0.5, 0.5),
+
+      // Top line, front face
+      new THREE.Vector3(0.5, 0.5, 0.5),
+      new THREE.Vector3(-0.5, 0.5, 0.5),
+
+      // Left line, front face
+      new THREE.Vector3(-0.5, 0.5, 0.5),
+      new THREE.Vector3(-0.5, -0.5, 0.5),
+
+      // Bottom line, front face
+      new THREE.Vector3(-0.5, -0.5, 0.5),
+      new THREE.Vector3(0.5, -0.5, 0.5),
+
+      // Top-left faces connector
+      new THREE.Vector3(-0.5, 0.5, 0.5),
+      new THREE.Vector3(-0.5, 0.5, -0.5),
+
+      // Bottom-left faces connector
+      new THREE.Vector3(-0.5, -0.5, 0.5),
+      new THREE.Vector3(-0.5, -0.5, -0.5),
+
+      // Top-right faces connector
+      new THREE.Vector3(0.5, 0.5, 0.5),
+      new THREE.Vector3(0.5, 0.5, -0.5),
+
+      // Bottom-right faces connector
+      new THREE.Vector3(0.5, -0.5, 0.5),
+      new THREE.Vector3(0.5, -0.5, -0.5),
+
+      // Right line, back face
+      new THREE.Vector3(0.5, -0.5, -0.5),
+      new THREE.Vector3(0.5, 0.5, -0.5),
+
+      // Top line, back face
+      new THREE.Vector3(0.5, 0.5, -0.5),
+      new THREE.Vector3(-0.5, 0.5, -0.5),
+
+      // Left line, back face
+      new THREE.Vector3(-0.5, 0.5, -0.5),
+      new THREE.Vector3(-0.5, -0.5, -0.5),
+
+      // Bottom line, back face
+      new THREE.Vector3(-0.5, -0.5, -0.5),
+      new THREE.Vector3(0.5, -0.5, -0.5),
+    ]);
+
+    return geometry;
+  }, []);
+
+  const leftSquareTunnel = useMemo(() => {
+    return <group position={[LEFT_OFFSET, 0, START_DEPTH]}>
+      {/* <mesh>
+        <edgesGeometry>
+          <boxGeometry args={[2, 20, 20]} />
+        </edgesGeometry>      
+        <meshBasicMaterial wireframe={true} />
+      </mesh> */}
+      <lineSegments scale={[1, 10, 10]}>
+        <primitive object={boxLineGeometry} attach='geometry' />
+        <lineBasicMaterial color={lineColor} />
+      </lineSegments>
+      <mesh scale={[10, 10, 1]} rotation={[0, Math.PI / 2, 0]} position={[0.5, 0, 0]}>
+        <planeGeometry />
+        <primitive object={filled} attach='material' />
+      </mesh>
+      <lineSegments scale={[1, 10, 10]} position={[0, 0, -10]}>
+        <primitive object={boxLineGeometry} attach='geometry' />
+        <lineBasicMaterial color={lineColor} />
+      </lineSegments>
+      <lineSegments scale={[1, 10, 10]} position={[0, 0, -20]}>
+        <primitive object={boxLineGeometry} attach='geometry' />
+        <lineBasicMaterial color={lineColor} />
+      </lineSegments>
+      <lineSegments scale={[1, 10, 10]} position={[0, 0, -30]}>
+        <primitive object={boxLineGeometry} attach='geometry' />
+        <lineBasicMaterial color={lineColor} />
+      </lineSegments>
+    </group>
+  }, [boxLineGeometry, filled]);
+
+  return (
+    leftSquareTunnel
+  );
+}
+
 function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }) {
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
   const colorDepthEffect = useRef<typeof ColorDepthEffect>(null!);
@@ -391,6 +492,7 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       <ambientLight intensity={0.1} />
       <directionalLight position={[0, 0, 20]} />
       <primitive object={sunMesh} />
+      <BassTunnel audio={props.audio} analyser={props.analyser} trackAnalysis={props.trackAnalysis} />
       <PeakQueue audio={props.audio} peaks={props.trackAnalysis.beat} audioLastSeeked={props.audioLastSeeked} />
       <FrequencyGrid audio={props.audio} analyser={props.analyser} trackAnalysis={props.trackAnalysis} />
       {/* 
