@@ -6,7 +6,6 @@ import { GodRaysEffect, ColorDepthEffect, NoiseEffect, BlendFunction, Resizer, K
 
 import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
-import { MeshBasicMaterial, PlaneGeometry } from 'three';
 
 function generateNumericArray(total: number) {
   return Array.from(Array(total).keys());
@@ -377,7 +376,7 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       const segmentDisplayMode = props.trackAnalysis.getTrackTimeRandomInt(0, 6, segmentNum);
 
       // Because we want to customize a lot of the properties on the plane mesh based on this mesh, generate it ahead of time
-      const planeForSegment = new THREE.Mesh(new PlaneGeometry(), new MeshBasicMaterial({ color: fillerColor, side: THREE.DoubleSide }));
+      const planeForSegment = new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial({ color: fillerColor, side: THREE.DoubleSide }));
       tunnelSegmentPlanes.current[segmentNum] = planeForSegment;
       planeForSegment.visible = true;
 
@@ -441,23 +440,8 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         >
           <primitive object={boxLineGeometry} attach='geometry' />
           <lineBasicMaterial color={lineColor} />
-        </lineSegments>
-        
-        {/* 
-          Because the plane geometry spans the X and Y axes, we need to rotate by 90 degrees on the Y axis so that it displays flush with the side of the box.
-          Similarly, because it's center-aligned with the middle of the box, we need to translate it to stay flush.
-        */}
+        </lineSegments>   
         <primitive object={planeForSegment} />
-        {/* <mesh
-          ref={(mesh: THREE.Mesh) => tunnelSegmentPlanes.current[segmentNum] = mesh}
-          visible={isPlaneVisible}
-          position={[horizPlane, 0, 0]}
-          rotation={[0, Math.PI / 2, 0]}
-          scale={[SEGMENT_DEPTH, SEGMENT_HEIGHT, 1]}
-        >
-          <planeGeometry />
-          <meshBasicMaterial color={fillerColor} side={THREE.DoubleSide} />
-        </mesh>*/}
       </group>
     }),
     [props.trackAnalysis, boxLineGeometry, lineColor, fillerColor]);
