@@ -332,7 +332,7 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
       analysis.bass = bassResult;
       analysis.beat = beatResult;
       analysis.treble = trebleResult;
-      analysis.trackHash = Math.floor(file.lastModified + file.size);
+      analysis.trackHash = Math.floor(file.lastModified + file.size) + 1;
 
       return analysis;
     });

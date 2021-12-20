@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { generateNumericArray } from './Utils';
 import { TrackAnalysis } from './TrackAnalysis';
 
+const QUARTER_TURN = Math.PI / 2;
+
 export function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
   const SEGMENTS_PER_SIDE = 10;
   const SEGMENT_DEPTH = 10;
@@ -106,17 +108,17 @@ export function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, analyser
         case 1:
           planeForSegment.scale.set(SEGMENT_DEPTH, SEGMENT_HEIGHT, 1);
           planeForSegment.position.set(-SEGMENT_WIDTH / 2, 0, 0);
-          planeForSegment.rotateY(Math.PI / 2);
+          planeForSegment.rotation.set(0, QUARTER_TURN, 0);
           break;
 
         // 2 - plane visible on the right of the box
         case 2:
           planeForSegment.scale.set(SEGMENT_DEPTH, SEGMENT_HEIGHT, 1);
           planeForSegment.position.set(SEGMENT_WIDTH / 2, 0, 0);
-          planeForSegment.rotateY(Math.PI / 2);
+          planeForSegment.rotation.set(0, QUARTER_TURN, 0);
           break;
 
-        // 3 - plane visible on the front of the box         
+        // 3 - plane visible on the front of the box
         case 3:
           planeForSegment.scale.set(SEGMENT_WIDTH, SEGMENT_HEIGHT, 1);
           planeForSegment.position.set(0, 0, SEGMENT_DEPTH / 2);
@@ -127,19 +129,23 @@ export function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, analyser
         case 4:
           planeForSegment.scale.set(SEGMENT_WIDTH, SEGMENT_DEPTH, 1);
           planeForSegment.position.set(0, SEGMENT_HEIGHT / 2, 0);
-          planeForSegment.rotateX(Math.PI / 2);
+          planeForSegment.rotation.set(QUARTER_TURN, 0, 0);
           break;
 
         // 5 - plane visible on the bottom of the box
         case 5:
           planeForSegment.scale.set(SEGMENT_WIDTH, SEGMENT_DEPTH, 1);
           planeForSegment.position.set(0, -SEGMENT_HEIGHT / 2, 0);
-          planeForSegment.rotateX(Math.PI / 2);
+          planeForSegment.rotation.set(QUARTER_TURN, 0, 0);
           break;
 
         // 6 - plane is hidden
         case 6:
           planeForSegment.visible = false;
+          break;
+
+        default:
+          console.trace(`unexpected display mode: ${segmentDisplayMode} for segment ${segmentNum}`);
           break;
       }
 

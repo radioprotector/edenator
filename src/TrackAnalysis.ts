@@ -26,8 +26,10 @@ export class TrackAnalysis
   /**
    * The hash to identify the track. This is not guaranteed to be unique, but is
    * intended to help ensure deterministic results for the same track.
+   * 
+   * This should be a positive non-zero finite integer.
    */
-  public trackHash: number = 0;
+  public trackHash: number = 1;
 
   /**
    * Gets a random integer that is deterministic for the track.
@@ -35,8 +37,7 @@ export class TrackAnalysis
    * @param high The maximum possible integer value.
    */
   public getTrackRandomInt(low: number, high: number): number {
-    // Because we're using Math.floor on the random result, we need to go 1 *above* the high
-    return low + Math.floor(MathUtils.seededRandom(this.trackHash) * (high + 1));
+    return this.getTrackTimeRandomInt(low, high, 0);
   }
 
   /**
@@ -50,8 +51,11 @@ export class TrackAnalysis
     const roundedTime = Math.floor(time * 1000);
 
     // Because we're using Math.floor on the random result, we need to go 1 *above* the high
-    return low + Math.floor(MathUtils.seededRandom(this.trackHash + roundedTime) * (high + 1));
-   }
+    const result = low + Math.floor(MathUtils.seededRandom(this.trackHash + roundedTime) * (high - low + 1));
+
+    // HACK: Because seededRandom returns over the range [0, 1], we need to handle the special case where it legitimately returns 1
+    return MathUtils.clamp(result, low, high);
+  }
 }
 
 export const EmptyTrackAnalysis = new TrackAnalysis();
