@@ -164,13 +164,6 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   // and avoid sharp cliffs
   const ANCHOR_POINTS = 8;
 
-  // Calculate the number of seconds per measure
-  const secondsPerMeasure = useMemo(() => {
-    // Assuming 4 beats per measure, BPM / 4 => measures/minute / 60 => BPM/240 for measures per second
-    // Use the inverse to get seconds per measure
-    return 240 / props.trackAnalysis.bpm;
-  }, [props.trackAnalysis])
-
   // Construct the set of points to use for each line
   const pointSet = useMemo(() => {
     const points: THREE.Vector3[] = [];
@@ -262,6 +255,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
 
     // Calculate how much of the measure, by percentage has elapsed by now
     let measurePercentage = 0;
+    const secondsPerMeasure = props.trackAnalysis.secondsPerMeasure;
 
     if (props.audio.current.currentTime > 0) {
       measurePercentage = (props.audio.current.currentTime % secondsPerMeasure) / secondsPerMeasure;

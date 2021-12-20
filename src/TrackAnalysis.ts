@@ -9,6 +9,12 @@ export class TrackAnalysis
 
   public bpm: number = 120;
 
+  public get secondsPerMeasure(): number {
+    // Assuming 4 beats per measure, BPM / 4 => measures/minute / 60 => BPM/240 for measures per second
+    // Use the inverse to get seconds per measure
+    return 240 / this.bpm;
+  }
+
   public subBass: Peak[] = [];
 
   public bass: Peak[] = [];
