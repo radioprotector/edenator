@@ -38,6 +38,20 @@ export class TrackAnalysis
     // Because we're using Math.floor on the random result, we need to go 1 *above* the high
     return low + Math.floor(MathUtils.seededRandom(this.trackHash) * (high + 1));
   }
+
+  /**
+   * Gets a random integer that is deterministic for the track and current time.
+   * @param low The minimum possible integer value.
+   * @param high The maximum possible integer value.
+   * @param time The current time to use as a seed. Fractional seconds will be rounded with a granularity of 1ms.
+   */
+   public getTrackTimeRandomInt(low: number, high: number, time: number): number {
+    // Multiply the time against 1000 to ensure resolution with 1ms granularity
+    const roundedTime = Math.floor(time * 1000);
+
+    // Because we're using Math.floor on the random result, we need to go 1 *above* the high
+    return low + Math.floor(MathUtils.seededRandom(this.trackHash + roundedTime) * (high + 1));
+   }
 }
 
 export const EmptyTrackAnalysis = new TrackAnalysis();
