@@ -160,6 +160,10 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   const BUCKET_WIDTH = 0.5;
   const BUCKET_HEIGHT = 5.0;
 
+  // On either end, we want a set number of points to ease down the minimum/maximum frequencies to 0
+  // and avoid sharp cliffs
+  const ANCHOR_POINTS = 8;
+
   // Calculate the number of seconds per measure
   const secondsPerMeasure = useMemo(() => {
     // Assuming 4 beats per measure, BPM / 4 => measures/minute / 60 => BPM/240 for measures per second
@@ -171,21 +175,28 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   const pointSet = useMemo(() => {
     const points: THREE.Vector3[] = [];
 
-    // Insert four special points at the beginning to anchor it so that "cliffs" aren't as sharp on the end
-    points.push(new THREE.Vector3(LINE_BUCKETS * -1 * BUCKET_WIDTH, 0, 0));
-    points.push(new THREE.Vector3(LINE_BUCKETS * -0.875 * BUCKET_WIDTH, 0, 0));
-    points.push(new THREE.Vector3(LINE_BUCKETS * -0.75 * BUCKET_WIDTH, 0, 0));
-    points.push(new THREE.Vector3(LINE_BUCKETS * -0.625 * BUCKET_WIDTH, 0, 0));
+    // Start by adding anchor points on the left-hand side and use a different scale just for the anchors
+    // Ideally we want something like
+    // |--25% anchors--|----50% points----|--25% anchors--|
+    const anchorIncrement = (LINE_BUCKETS * BUCKET_WIDTH) / (4 * ANCHOR_POINTS);
+    let currentX = -(anchorIncrement * ANCHOR_POINTS) - (LINE_BUCKETS * BUCKET_WIDTH / 2);
 
-    for(let i = 0; i < LINE_BUCKETS; i++) {
-      points.push(new THREE.Vector3((i - (LINE_BUCKETS / 2)) * BUCKET_WIDTH, 0, 0));
+    for (let i = 0; i < ANCHOR_POINTS; i++) {
+      points.push(new THREE.Vector3(currentX, 0, 0));
+      currentX += anchorIncrement;
     }
 
-    // Similarly, insert four anchors at the end
-    points.push(new THREE.Vector3(LINE_BUCKETS * 0.625 * BUCKET_WIDTH, 0, 0));
-    points.push(new THREE.Vector3(LINE_BUCKETS * 0.75 * BUCKET_WIDTH, 0, 0));
-    points.push(new THREE.Vector3(LINE_BUCKETS * 0.875 * BUCKET_WIDTH, 0, 0));
-    points.push(new THREE.Vector3(LINE_BUCKETS * BUCKET_WIDTH, 0, 0));
+    // Now start distributing the "normal" points around zero
+    for(let i = 0; i < LINE_BUCKETS; i++) {
+      points.push(new THREE.Vector3(currentX, 0, 0));
+      currentX += BUCKET_WIDTH;
+    }
+
+    // Add the ending anchors
+    for (let i = 0; i < ANCHOR_POINTS; i++) {
+      points.push(new THREE.Vector3(currentX, 0, 0));
+      currentX += anchorIncrement;
+    }    
 
     return points;
   }, []);
@@ -227,21 +238,27 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
     props.analyser.current.getByteFrequencyData(frequencies);
 
     // Skip over the four anchor points at the beginning and the four anchor points at the end
-    for(let i = 4; i < frequencies.length && i < pointSet.length - 4; i++) {
-      pointSet[i].y = (frequencies[i] / 255.0) * BUCKET_HEIGHT;
+    for(let i = 0; i < frequencies.length; i++) {
+      // Ensure that we're skipping over the anchors when accessing points, so that
+      // frequencies[0] will correspond with pointSet[ANCHOR_POINTS]
+      pointSet[i + ANCHOR_POINTS].y = (frequencies[i] / 255.0) * BUCKET_HEIGHT;
     }
 
     // Use the anchor points to scale down the edges
-    const firstFrequency = (frequencies[0] / 255.0) * BUCKET_HEIGHT;
-    const lastFrequency = (frequencies[frequencies.length - 1] / 255.0) * BUCKET_HEIGHT;
+    let leftmostFrequency = (frequencies[0] / 255.0) * BUCKET_HEIGHT;
+    let rightmostFrequency = (frequencies[frequencies.length - 1] / 255.0) * BUCKET_HEIGHT;
 
-    pointSet[3].y = firstFrequency * 0.75;
-    pointSet[2].y = firstFrequency * 0.5625;
-    pointSet[1].y = firstFrequency * 0.42;
+    // Move outward on the lefthand side (but don't touch the bucket at 0)
+    for(let i = ANCHOR_POINTS - 1; i > 0; i--) {
+      leftmostFrequency = leftmostFrequency / 1.618;
+      pointSet[i].y = leftmostFrequency;
+    }
 
-    pointSet[LINE_BUCKETS].y = lastFrequency * 0.75;
-    pointSet[LINE_BUCKETS+1].y = lastFrequency * 0.5625;
-    pointSet[LINE_BUCKETS+2].y = lastFrequency * 0.42;
+    // Move outward on the righthand side (but again skip over the last bucket)
+    for (let i = LINE_BUCKETS + ANCHOR_POINTS; i < pointSet.length - 1; i++) {
+      rightmostFrequency = rightmostFrequency / 1.618;
+      pointSet[i].y = rightmostFrequency;
+    }
 
     // Calculate how much of the measure, by percentage has elapsed by now
     let measurePercentage = 0;
@@ -259,6 +276,9 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
       lineRow.geometry.setFromPoints(pointSet);
       lineRow.geometry.computeBoundingBox();
 
+      // Move forward the Z by the row spacing * the % of the measure completed.
+      // This ensures that each row will approach the previous row's starting point,
+      // but will snap back to the starting point once the new measure starts
       if (props.audio.current.currentTime > 0) {
         lineRow.position.z = baseDepth - (DEPTH_SPACING * measurePercentage);
       }
