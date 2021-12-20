@@ -1,14 +1,18 @@
 import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 
 import { generateNumericArray } from './Utils';
 import { TrackAnalysis } from './TrackAnalysis';
 
 const QUARTER_TURN = Math.PI / 2;
 
-const SEGMENT_DEPTH = 10;
+const SEGMENT_DEPTH = 5;
 const SEGMENT_WIDTH = 2;
-const SEGMENT_HEIGHT = 10;
+const SEGMENT_HEIGHT = 15;
+
+const SEGMENTS_PER_SIDE = 20;
+const START_DEPTH = SEGMENT_DEPTH;
 
 /**
  * Randomizes the presentation of the provided tunnel segment based on the current track and time.
@@ -23,10 +27,14 @@ function randomizeTunnelSegment(segmentIndex: number, segment: THREE.Group, plan
   segment.visible = true;
   planeForSegment.visible = true;
 
-  // Randomly determine how this segment might appear based on the current time
-  // If we're changing two segments in the same frame, we might run into conflicts, and so it's a good idea
-  // to also incorporate the segment index so that we still get variances there.
-  const segmentDisplayMode = trackAnalysis.getTrackTimeRandomInt(0, 6, currentTrackTime + segmentIndex);
+  // Randomly determine how this segment might appear based on the current time.
+  // If we're changing two segments in the same frame, we might run into conflicts, 
+  // and so it's a good idea to also incorporate the segment index so there are still variances
+  let segmentDisplayMode = 6;
+  
+  if (!trackAnalysis.isEmpty) {
+    segmentDisplayMode = trackAnalysis.getTrackTimeRandomInt(0, 6, currentTrackTime + segmentIndex);
+  }
 
   switch(segmentDisplayMode) {
     // 0 - entire segment hidden
@@ -81,9 +89,11 @@ function randomizeTunnelSegment(segmentIndex: number, segment: THREE.Group, plan
   }
 }
 
-export function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
-  const SEGMENTS_PER_SIDE = 10;
-  const START_DEPTH = -10;
+function getDepthForSegment(segmentIndex: number): number {
+  return START_DEPTH - (SEGMENT_DEPTH * (segmentIndex % SEGMENTS_PER_SIDE))
+}
+
+export function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }) {
   const HORIZ_OFFSET = 10;
 
   // When we normally try to display a standard box geometry using wireframes,
@@ -155,50 +165,87 @@ export function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, analyser
     const fillerColor = new THREE.Color(0x850707);
 
     return generateNumericArray(SEGMENTS_PER_SIDE * 2)
-      .map((segmentNum) => {
+      .map((segmentIndex) => {
         return <group
-          ref={(grp: THREE.Group) => tunnelSegments.current[segmentNum] = grp}
-          key={segmentNum}
+          ref={(grp: THREE.Group) => tunnelSegments.current[segmentIndex] = grp}
+          key={segmentIndex}
         >
           <lineSegments
-            ref={(seg: THREE.LineSegments) => tunnelSegmentBoxes.current[segmentNum] = seg}
+            ref={(seg: THREE.LineSegments) => tunnelSegmentBoxes.current[segmentIndex] = seg}
             scale={[SEGMENT_WIDTH, SEGMENT_HEIGHT, SEGMENT_DEPTH]}
           >
             <primitive object={boxLineGeometry} attach='geometry' />
             <lineBasicMaterial color={lineColor} />
           </lineSegments>   
           <mesh
-            ref={(plane: THREE.Mesh) => tunnelSegmentPlanes.current[segmentNum] = plane}
+            ref={(plane: THREE.Mesh) => tunnelSegmentPlanes.current[segmentIndex] = plane}
           >
             <planeGeometry />
-            <meshBasicMaterial color={fillerColor} side={THREE.DoubleSide} />
+            <meshBasicMaterial color={fillerColor} side={THREE.DoubleSide} transparent={true} opacity={0.5} />
           </mesh>
         </group>
       });
     }, [boxLineGeometry]);
 
+  // Determine the amount of time it should take for a segment to scroll the length of the tunnel
+  const tunnelTraversalPeriodSeconds = useMemo(() => {
+      return props.trackAnalysis.secondsPerMeasure * 0.5 * SEGMENTS_PER_SIDE;
+    },
+    [props.trackAnalysis]);
+
   // Reset the initial arrangement when the track analysis changes
   useEffect(() => {
-    for(let segmentNum = 0; segmentNum < tunnelSegments.current.length; segmentNum++) {
-      const groupForSegment = tunnelSegments.current[segmentNum];
-      const planeForSegment = tunnelSegmentPlanes.current[segmentNum];
+    for(let segmentIndex = 0; segmentIndex < tunnelSegments.current.length; segmentIndex++) {
+      const groupForSegment = tunnelSegments.current[segmentIndex];
+      const planeForSegment = tunnelSegmentPlanes.current[segmentIndex];
 
       // Position the overall group for the segment.
       // The first half of the segments will be on the left side, the remainder will be on the right
       // Each half will be positioned one behind the other
-      const segmentDepth = START_DEPTH - (SEGMENT_DEPTH * (segmentNum % SEGMENTS_PER_SIDE));
+      const segmentDepth = getDepthForSegment(segmentIndex);
 
-      if (segmentNum < SEGMENTS_PER_SIDE) {
+      if (segmentIndex < SEGMENTS_PER_SIDE) {
         groupForSegment.position.set(-HORIZ_OFFSET, 0, segmentDepth);
       }
       else {
         groupForSegment.position.set(HORIZ_OFFSET, 0, segmentDepth);
       }
 
-      // Randomize the presentation
-      randomizeTunnelSegment(segmentNum, groupForSegment, planeForSegment, props.trackAnalysis, 0); 
+      // Randomize the presentation for initial display
+      randomizeTunnelSegment(segmentIndex, groupForSegment, planeForSegment, props.trackAnalysis, 0); 
     }
   }, [props.trackAnalysis, tunnelSegments, tunnelSegmentPlanes]);
+
+  useFrame(() => {
+    // Determine the depth offset to apply to all segments
+    const TOTAL_DEPTH = SEGMENT_DEPTH * SEGMENTS_PER_SIDE;
+    const WRAP_DEPTH = getDepthForSegment(0) + (2 * SEGMENT_DEPTH);
+    let timeDepthOffset = 0;
+    let currentTrackTime = 0;
+
+    if (props.audio.current !== null) {
+      currentTrackTime = props.audio.current.currentTime;
+      timeDepthOffset = TOTAL_DEPTH * (currentTrackTime % tunnelTraversalPeriodSeconds) / tunnelTraversalPeriodSeconds;
+    }
+
+    for(let segmentIndex = 0; segmentIndex < tunnelSegments.current.length; segmentIndex++) {
+      const segment = tunnelSegments.current[segmentIndex];
+      let segmentDepth = getDepthForSegment(segmentIndex) + timeDepthOffset;
+
+      // Wrap the group if it's past the camera
+      if (segmentDepth > WRAP_DEPTH) {
+        segmentDepth -= TOTAL_DEPTH;
+
+        // If this is the first time we've had to re-position the wrapped element, randomize the segment's appearance
+        if (segmentDepth < segment.position.z) {
+          const planeForSegment = tunnelSegmentPlanes.current[segmentIndex];
+          randomizeTunnelSegment(segmentIndex, segment, planeForSegment, props.trackAnalysis, currentTrackTime);
+        }
+      }
+
+      segment.position.z = segmentDepth;
+    }
+  })
 
   return (
     <group>

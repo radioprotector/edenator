@@ -32,6 +32,11 @@ export class TrackAnalysis
   public trackHash: number = 1;
 
   /**
+   * Used to indicate "empty" instances for special default displays.
+   */
+  public isEmpty: boolean = false;
+
+  /**
    * Gets a random integer that is deterministic for the track.
    * @param low The minimum possible integer value.
    * @param high The maximum possible integer value.
@@ -44,11 +49,11 @@ export class TrackAnalysis
    * Gets a random integer that is deterministic for the track and current time.
    * @param low The minimum possible integer value.
    * @param high The maximum possible integer value.
-   * @param time The current time to use as a seed. Fractional seconds will be rounded with a granularity of 1ms.
+   * @param time The current time to use as a seed. Fractional seconds will be rounded with a granularity of 10ms.
    */
    public getTrackTimeRandomInt(low: number, high: number, time: number): number {
-    // Multiply the time against 1000 to ensure resolution with 1ms granularity
-    const roundedTime = Math.floor(time * 1000);
+    // Multiply the time against 100 to ensure resolution with 10ms granularity
+    const roundedTime = Math.floor(time * 100);
 
     // Because we're using Math.floor on the random result, we need to go 1 *above* the high
     const result = low + Math.floor(MathUtils.seededRandom(this.trackHash + roundedTime) * (high - low + 1));
@@ -59,3 +64,4 @@ export class TrackAnalysis
 }
 
 export const EmptyTrackAnalysis = new TrackAnalysis();
+EmptyTrackAnalysis.isEmpty = true;
