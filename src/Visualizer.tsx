@@ -385,9 +385,12 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
 
 function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis, audioLastSeeked: number }) {
   // Create the sun mesh ahead of time so that we don't have to muck around with refs when passing it to the VFX manager
-  const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(5), new THREE.MeshBasicMaterial({color: 0xffcc55, transparent: true, fog: false}));
-  sunMesh.frustumCulled = false;
-  sunMesh.position.set(0, 0, -200);
+  const sunMesh = useMemo(() => {
+    let mesh = new THREE.Mesh(new THREE.SphereGeometry(5), new THREE.MeshBasicMaterial({color: 0xffcc55, transparent: true, fog: false}));
+    mesh.frustumCulled = false;
+    mesh.position.set(0, 0, -200);
+    return mesh;
+  }, []);
 
   return (
     <Canvas camera={{position: [0, 0, 15]}}>
