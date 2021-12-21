@@ -14,6 +14,18 @@ const SEGMENT_HEIGHT = 15;
 const SEGMENTS_PER_SIDE = 20;
 const START_DEPTH = SEGMENT_DEPTH;
 
+const enum SegmentDisplay {
+  SegmentHidden = 0,
+  MIN = SegmentHidden,
+  PlaneLeft = 1,
+  PlaneRight = 2,
+  PlaneFront = 3,
+  PlaneTop = 4,
+  PlaneBottom = 5,
+  PlaneHidden = 6,
+  MAX = PlaneHidden
+}
+
 /**
  * Randomizes the presentation of the provided tunnel segment based on the current track and time.
  * @param segmentIndex The index of the segment.
@@ -28,58 +40,54 @@ function randomizeTunnelSegment(segmentIndex: number, segment: THREE.Group, plan
   planeForSegment.visible = true;
 
   // Randomly determine how this segment might appear based on the current time.
-  // If we're changing two segments in the same frame, we might run into conflicts, 
+  // If we're changing two segments in the same frame, we might run into overlap, 
   // and so it's a good idea to also incorporate the segment index so there are still variances
-  let segmentDisplayMode = 6;
+  let segmentDisplayMode: SegmentDisplay;
   
   if (!trackAnalysis.isEmpty) {
-    segmentDisplayMode = trackAnalysis.getTrackTimeRandomInt(0, 6, currentTrackTime + segmentIndex);
+    segmentDisplayMode = trackAnalysis.getTrackSeededRandomInt(SegmentDisplay.MIN, SegmentDisplay.MAX, currentTrackTime + segmentIndex);
+  }
+  else {
+    segmentDisplayMode = SegmentDisplay.PlaneHidden;
   }
 
   switch(segmentDisplayMode) {
-    // 0 - entire segment hidden
-    case 0:
+    case SegmentDisplay.SegmentHidden:
       segment.visible = false;
       planeForSegment.visible = false;
       break;
 
-    // 1 - plane visible on the left of the box
-    case 1:
+    case SegmentDisplay.PlaneLeft:
       planeForSegment.scale.set(SEGMENT_DEPTH, SEGMENT_HEIGHT, 1);
       planeForSegment.position.set(-SEGMENT_WIDTH / 2, 0, 0);
       planeForSegment.rotation.set(0, QUARTER_TURN, 0);
       break;
 
-    // 2 - plane visible on the right of the box
-    case 2:
+    case SegmentDisplay.PlaneRight:
       planeForSegment.scale.set(SEGMENT_DEPTH, SEGMENT_HEIGHT, 1);
       planeForSegment.position.set(SEGMENT_WIDTH / 2, 0, 0);
       planeForSegment.rotation.set(0, QUARTER_TURN, 0);
       break;
 
-    // 3 - plane visible on the front of the box
-    case 3:
+    case SegmentDisplay.PlaneFront:
       planeForSegment.scale.set(SEGMENT_WIDTH, SEGMENT_HEIGHT, 1);
       planeForSegment.position.set(0, 0, SEGMENT_DEPTH / 2);
       planeForSegment.rotation.set(0, 0, 0);
       break;
 
-    // 4 - plane visible on the top of the box
-    case 4:
+    case SegmentDisplay.PlaneTop:
       planeForSegment.scale.set(SEGMENT_WIDTH, SEGMENT_DEPTH, 1);
       planeForSegment.position.set(0, SEGMENT_HEIGHT / 2, 0);
       planeForSegment.rotation.set(QUARTER_TURN, 0, 0);
       break;
 
-    // 5 - plane visible on the bottom of the box
-    case 5:
+    case SegmentDisplay.PlaneBottom:
       planeForSegment.scale.set(SEGMENT_WIDTH, SEGMENT_DEPTH, 1);
       planeForSegment.position.set(0, -SEGMENT_HEIGHT / 2, 0);
       planeForSegment.rotation.set(QUARTER_TURN, 0, 0);
       break;
 
-    // 6 - plane is hidden
-    case 6:
+    case SegmentDisplay.PlaneHidden:
       planeForSegment.visible = false;
       break;
 

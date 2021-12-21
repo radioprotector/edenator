@@ -1,4 +1,3 @@
-import { MathUtils } from "three";
 import Peak from "./Peak";
 
 export class TrackAnalysis
@@ -42,24 +41,23 @@ export class TrackAnalysis
    * @param high The maximum possible integer value.
    */
   public getTrackRandomInt(low: number, high: number): number {
-    return this.getTrackTimeRandomInt(low, high, 0);
+    return this.getTrackSeededRandomInt(low, high, 0);
   }
 
   /**
-   * Gets a random integer that is deterministic for the track and current time.
+   * Gets a random integer that is deterministic for the track and specified seed.
    * @param low The minimum possible integer value.
    * @param high The maximum possible integer value.
-   * @param time The current time to use as a seed. Fractional seconds will be rounded with a granularity of 10ms.
+   * @param seed The seed to use.
    */
-   public getTrackTimeRandomInt(low: number, high: number, time: number): number {
-    // Multiply the time against 100 to ensure resolution with 10ms granularity
-    const roundedTime = Math.floor(time * 100);
+  public getTrackSeededRandomInt(low: number, high: number, seed: number): number {
+    // Because our random number seeds aren't as clustered around pi, this should vary *enough* for our purposes
+    // Something like THREE.MathUtils.seededRandom exhibits very little variation between small seed increments of 1,
+    // which doesn't work well for our purposes.
+    const random = (Math.sin(this.trackHash + seed) + 1) / 2;
 
     // Because we're using Math.floor on the random result, we need to go 1 *above* the high
-    const result = low + Math.floor(MathUtils.seededRandom(this.trackHash + roundedTime) * (high - low + 1));
-
-    // HACK: Because seededRandom returns over the range [0, 1], we need to handle the special case where it legitimately returns 1
-    return MathUtils.clamp(result, low, high);
+    return low + Math.floor(random * (high - low + 1));
   }
 }
 
