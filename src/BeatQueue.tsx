@@ -18,7 +18,7 @@ function getBasePosition(sideIdx: number, totalSides: number, scale: number): TH
   return new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(scale);
 }
 
-export function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }) {
+function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
   let nextAvailableMeshIndex = 0;
   const availableMeshesRing = useRef<THREE.Mesh[]>([]);
@@ -143,3 +143,5 @@ export function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLast
     </group>
   )
 }
+
+export default BeatQueue;

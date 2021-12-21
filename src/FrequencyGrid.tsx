@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { generateNumericArray } from './Utils';
 import { TrackAnalysis } from './TrackAnalysis';
 
-export function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }) {
+function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }): JSX.Element {
   // Track how many rows we have, where the first row starts, depth-wise, and the spacing between each row  
   const FREQUENCY_ROWS: number = 10;
   const STARTING_DEPTH: number = -10;
@@ -144,3 +144,5 @@ export function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analy
     </group>
   );
 }
+
+export default FrequencyGrid;

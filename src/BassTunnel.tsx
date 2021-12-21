@@ -101,7 +101,7 @@ function getDepthForSegment(segmentIndex: number): number {
   return START_DEPTH - (SEGMENT_DEPTH * (segmentIndex % SEGMENTS_PER_SIDE))
 }
 
-export function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }) {
+function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }): JSX.Element {
   const HORIZ_OFFSET = 10;
 
   // When we normally try to display a standard box geometry using wireframes,
@@ -261,3 +261,5 @@ export function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLas
     </group>
   );
 }
+
+export default BassTunnel;

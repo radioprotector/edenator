@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { EffectComposer, Bloom, GodRays, ColorDepth, Noise } from '@react-three/postprocessing';
 import { GodRaysEffect, ColorDepthEffect, NoiseEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
-export function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }) {
+function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }): JSX.Element {
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
   const colorDepthEffect = useRef<typeof ColorDepthEffect>(null!);
   const noiseEffect = useRef<typeof NoiseEffect>(null!);
@@ -91,3 +91,5 @@ export function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     </EffectComposer>
   )
 }
+
+export default VfxManager;

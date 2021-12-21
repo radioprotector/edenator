@@ -3,12 +3,12 @@ import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 
 import { TrackAnalysis } from './TrackAnalysis';
-import { BassTunnel } from './BassTunnel';
-import { BeatQueue } from './BeatQueue';
-import { FrequencyGrid } from './FrequencyGrid';
-import { VfxManager } from './VfxManager';
+import BassTunnel from './BassTunnel';
+import BeatQueue from './BeatQueue';
+import FrequencyGrid from './FrequencyGrid';
+import VfxManager from './VfxManager';
 
-function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis, audioLastSeeked: number }) {
+function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis, audioLastSeeked: number }): JSX.Element {
   // Create the sun mesh ahead of time so that we don't have to muck around with refs when passing it to the VFX manager
   const sunMesh = useMemo(() => {
       let mesh = new THREE.Mesh(new THREE.SphereGeometry(5), new THREE.MeshBasicMaterial({color: 0xffcc55, transparent: true, fog: false}));
