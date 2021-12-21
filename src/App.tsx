@@ -1,4 +1,6 @@
 import React, { useRef, useCallback, useState, useMemo, useEffect } from 'react';
+import { Stats } from '@react-three/drei';
+
 import { analyzeTrack } from './Analyzer';
 import { EmptyTrackAnalysis, TrackAnalysis } from './TrackAnalysis';
 
@@ -110,6 +112,7 @@ function App(): JSX.Element {
       <div id="canvas-container">
         <Visualizer audio={audioPlayerElement} analyser={audioAnalyser} trackAnalysis={currentAnalysis} audioLastSeeked={audioLastSeeked} />
       </div>
+      <Stats showPanel={0} className="stats" />
     </div>
   );
 }
