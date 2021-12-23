@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useCallback, useState, useMemo, useEffect, Suspense } from 'react';
 import { Stats } from '@react-three/drei';
 
 import { analyzeTrack } from './Analyzer';
@@ -106,13 +106,34 @@ function App(): JSX.Element {
     <div>
       <label htmlFor="sourceFile">
         Choose an audio file
-        <input type="file" ref={sourceFileElement} id="sourceFile" accept="audio/*" onChange={selectedFileChange} />
+        <input
+          type="file"
+          ref={sourceFileElement}
+          id="sourceFile"
+          accept="audio/*"
+          onChange={selectedFileChange}
+        />
       </label>
-      <audio ref={audioPlayerRef} id="audioPlayer" onSeeked={onAudioSeeked} controls></audio>
+      <audio
+        ref={audioPlayerRef}
+        id="audioPlayer"
+        onSeeked={onAudioSeeked}
+        controls>
+      </audio>
       <div id="canvas-container">
-        <Visualizer audio={audioPlayerElement} analyser={audioAnalyser} trackAnalysis={currentAnalysis} audioLastSeeked={audioLastSeeked} />
+        <Suspense fallback={null}>
+          <Visualizer
+            audio={audioPlayerElement}
+            analyser={audioAnalyser}
+            trackAnalysis={currentAnalysis}
+            audioLastSeeked={audioLastSeeked}
+          />
+        </Suspense>
       </div>
-      <Stats showPanel={0} className="stats" />
+      <Stats
+        showPanel={0}
+        className="stats"
+      />
     </div>
   );
 }
