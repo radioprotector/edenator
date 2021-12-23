@@ -104,6 +104,7 @@ function getDepthForSegment(segmentIndex: number): number {
 function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }): JSX.Element {
   const HORIZ_OFFSET = 10;
   let nextBassIndex = 0;
+  let nextSubBassIndex = 0;
 
   // When we normally try to display a standard box geometry using wireframes,
   // it will display each side using two triangles. We want pure lines,
@@ -231,8 +232,11 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
     () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextBassIndex = 0;
+
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      nextSubBassIndex = 0;
     },
-    [props.trackAnalysis, props.trackAnalysis.bass, props.audioLastSeeked]);
+    [props.trackAnalysis, props.trackAnalysis.bass, props.trackAnalysis.subBass, props.audioLastSeeked]);
 
   useFrame(() => {
     // Determine the depth offset to apply to all segments
@@ -241,6 +245,7 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
     let timeDepthOffset = 0;
     let currentTrackTime = 0;
     let bassScalingFactor = 0;
+    let subBassScalingFactor = 0;
 
     if (props.audio.current !== null) {
       currentTrackTime = props.audio.current.currentTime;
@@ -279,6 +284,38 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
       bassScalingFactor = Math.max(effectiveIntensity, bassScalingFactor);
     }
 
+    // See if we're currently during a bass period
+    for(let subBassIndex = nextSubBassIndex; subBassIndex < props.trackAnalysis.subBass.length; subBassIndex++) {
+      const curSubBass = props.trackAnalysis.subBass[subBassIndex];
+      // Ease in and out of the sub-bass peak
+      const startTime = curSubBass.time - 0.5;
+      const endTime = curSubBass.end + 1.5;
+      let effectiveIntensity = curSubBass.intensity;
+
+      // If this is too early, stop looping
+      if (startTime > currentTrackTime) {
+        break;
+      }
+
+      // If we've already passed this peak, make sure we'll skip over it in subsequent frames
+      if (endTime < currentTrackTime) {
+        nextSubBassIndex++;
+        continue;
+      }
+
+      // We are somewhere during this peak period - because of that, update the intensity
+      // However, apply it less strongly if we're outside the actual peak
+      if (currentTrackTime < curSubBass.time) {
+        effectiveIntensity = THREE.MathUtils.mapLinear(currentTrackTime, startTime, curSubBass.time, 0, effectiveIntensity);
+      }
+      else if (currentTrackTime > curSubBass.end) {
+        effectiveIntensity = THREE.MathUtils.mapLinear(currentTrackTime, curSubBass.end, endTime, effectiveIntensity, 0);
+      }
+
+      // Use Math.max so that if we have multiple concurrent peaks, the strongest peak is what gets used
+      subBassScalingFactor = Math.max(effectiveIntensity, subBassScalingFactor);
+    }
+
     for(let segmentIndex = 0; segmentIndex < tunnelSegments.current.length; segmentIndex++) {
       const segment = tunnelSegments.current[segmentIndex];
       let segmentDepth = getDepthForSegment(segmentIndex) + timeDepthOffset;
@@ -296,8 +333,8 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
 
       segment.position.z = segmentDepth;
 
-      // Scale each segment based on the bass intensity
-      segment.scale.set(1, 1 + (bassScalingFactor * 0.75), 1);
+      // Scale each segment based on the bass (y)/sub-bass (x) intensity
+      segment.scale.set(1 + (subBassScalingFactor), 1 + (bassScalingFactor * 0.75), 1);
     }
   })
 
