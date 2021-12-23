@@ -64,11 +64,6 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
 
     // Determine if we need to fill the ring buffer with any new meshes
     for (let peakIdx = nextUnrenderedPeakIndex; peakIdx < props.trackAnalysis.beat.length; peakIdx++) {
-      // If we reached the end of the list, stop
-      if (peakIdx >= props.trackAnalysis.beat.length) {
-        break;
-      }
-
       const curPeak = props.trackAnalysis.beat[peakIdx];
       const nextPeakStart = curPeak.time - LOOKAHEAD_PERIOD;
 
