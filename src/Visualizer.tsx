@@ -6,6 +6,7 @@ import { TrackAnalysis } from './TrackAnalysis';
 import BassTunnel from './BassTunnel';
 import BeatQueue from './BeatQueue';
 import FrequencyGrid from './FrequencyGrid';
+import TrebleQueue from './TrebleQueue';
 import VfxManager from './VfxManager';
 
 function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis, audioLastSeeked: number }): JSX.Element {
@@ -26,6 +27,7 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       <BassTunnel audio={props.audio} trackAnalysis={props.trackAnalysis} audioLastSeeked={props.audioLastSeeked} />
       <BeatQueue audio={props.audio} trackAnalysis={props.trackAnalysis} audioLastSeeked={props.audioLastSeeked} />
       <FrequencyGrid audio={props.audio} analyser={props.analyser} trackAnalysis={props.trackAnalysis} />
+      <TrebleQueue audio={props.audio} trackAnalysis={props.trackAnalysis} audioLastSeeked={props.audioLastSeeked} />
       {/* 
         These are just to help visualize positioned elements relative to the camera.
           o Red - x
