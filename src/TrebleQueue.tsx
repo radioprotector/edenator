@@ -9,13 +9,14 @@ import Peak from './Peak';
 
 function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
-  let nextAvailableSpriteIndex = 0;
-  const availableSpritesRing = useRef<THREE.Sprite[]>([]);
+  let nextAvailableGroupIndex = 0;
+  const availableTrebleGroupsRing = useRef<THREE.Group[]>([]);
   const QUEUE_SIZE = 20;
   const LOOKAHEAD_PERIOD = 0.1;
   const DECAY_PERIOD = 1;
   const PEAK_DEPTH_START = -200;
   const PEAK_DEPTH_END = 10;
+  const BASE_LIGHT_INTENSITY = 20;
 
   const textures = useTexture({
     corona: 'textures/corona.png',
@@ -27,23 +28,31 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
   // Generate available sprites for use in a ring buffer
   const availableSpriteElements = 
     generateNumericArray(QUEUE_SIZE).map((index) => {
-      return <sprite
-        ref={(mesh: THREE.Sprite) => availableSpritesRing.current[index] = mesh}
-        visible={false}
-        scale={[15, 15, 1]}
+      return <group
         key={index}
+        visible={false}
+        ref={(grp: THREE.Group) => availableTrebleGroupsRing.current[index] = grp}
       >
-        <spriteMaterial
-          color={0xffaaff}
-          map={textures.wavering}
-          depthWrite={false}
-          transparent={true}
-          blending={THREE.CustomBlending}
-          blendEquation={THREE.AddEquation}
-          blendSrc={THREE.SrcAlphaFactor}
-          blendDst={THREE.OneMinusSrcColorFactor}
+        {/* XXX: Don't change the order/contents without updating the useEffect that looks at the group's children */}
+        <sprite
+          scale={[15, 15, 1]}
+        >
+          <spriteMaterial
+            color={0xffaaff}
+            map={textures.wavering}
+            depthWrite={false}
+            transparent={true}
+            blending={THREE.CustomBlending}
+            blendEquation={THREE.AddEquation}
+            blendSrc={THREE.SrcAlphaFactor}
+            blendDst={THREE.OneMinusSrcColorFactor}
+          />
+        </sprite>
+        <pointLight
+          color={0xffffff}
+          castShadow={false}
         />
-      </sprite>
+      </group>
     });
 
   // Reset the peak indices when we seek
@@ -52,12 +61,12 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextUnrenderedPeakIndex = 0;
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      nextAvailableSpriteIndex = 0;
+      nextAvailableGroupIndex = 0;
     },
     [props.trackAnalysis, props.trackAnalysis.treble, props.audioLastSeeked]);
 
   useFrame((state, delta) => {
-    if (props.audio.current === null || availableSpritesRing.current === null) {
+    if (props.audio.current === null || availableTrebleGroupsRing.current === null) {
       return;
     }
 
@@ -81,57 +90,68 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
         break;
       }
 
-      // Now we have a new peak to render. Assign it to the next available sprite
-      const spriteForPeak = availableSpritesRing.current[nextAvailableSpriteIndex];
-      spriteForPeak.userData['peak'] = curPeak;
+      // Now we have a new peak to render. Assign it to the next available group/sprite
+      const groupForPeak = availableTrebleGroupsRing.current[nextAvailableGroupIndex];
+      groupForPeak.userData['peak'] = curPeak;
 
-      // Randomize the position of the sprite
+      // Randomize the position of the group
       const angle = props.trackAnalysis.getTrackSeededRandomInt(0, 359, curPeak.time) * THREE.MathUtils.DEG2RAD;
       const radius = props.trackAnalysis.getTrackSeededRandomInt(12, 20, curPeak.time);
       
-      spriteForPeak.position.x = Math.cos(angle) * radius;
-      spriteForPeak.position.y = Math.sin(angle) * radius;
+      groupForPeak.position.x = Math.cos(angle) * radius;
+      groupForPeak.position.y = Math.sin(angle) * radius;
       
       // Switch around to the next sprite in the ring buffer
-      nextAvailableSpriteIndex = (nextAvailableSpriteIndex + 1) % availableSpritesRing.current.length;
+      nextAvailableGroupIndex = (nextAvailableGroupIndex + 1) % availableTrebleGroupsRing.current.length;
 
       // Ensure we're rendering the next peak
       nextUnrenderedPeakIndex++;
     }
 
     // Now update the items in the ring buffer
-    for (let spriteForPeak of availableSpritesRing.current)
+    for (let itemIdx = 0; itemIdx < availableTrebleGroupsRing.current.length; itemIdx++)
     {
-      const peakData = spriteForPeak.userData['peak'] as Peak;
+      const groupForPeak = availableTrebleGroupsRing.current[itemIdx];
+      const peakData = groupForPeak.userData['peak'] as Peak;
 
       if (peakData === null || peakData === undefined) {
-        spriteForPeak.visible = false;
+        groupForPeak.visible = false;
         continue;
       }
 
       const peakDisplayStart = peakData.time - LOOKAHEAD_PERIOD;
       const peakDisplayEnd = peakData.end + DECAY_PERIOD;
 
-      // See if we've finished peaking, which means we should hide the sprite
+      // See if we've finished peaking, which means we should hide the entire group
       if (peakDisplayStart > audioTime || peakDisplayEnd < lastRenderTime) {
-        spriteForPeak.visible = false;
-        delete spriteForPeak.userData['peak'];
+        groupForPeak.visible = false;
+        delete groupForPeak.userData['peak'];
         continue;
       }
 
-      // Make the sprite visible and lerp it to zoom in
-      spriteForPeak.visible = true;
-      spriteForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, PEAK_DEPTH_START, PEAK_DEPTH_END);
+      // Make the group visible and lerp it to zoom in
+      groupForPeak.visible = true;
+      groupForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, PEAK_DEPTH_START, PEAK_DEPTH_END);
 
-      // Fade the opacity if we're in the lookahead/decay period
+      // Fade the sprite opacity if we're in the lookahead/decay period
+      const spriteForPeak = groupForPeak.children[0] as THREE.Sprite;
+      const lightForPeak = groupForPeak.children[1] as THREE.PointLight;
+
       if (audioTime < peakData.time) {
-        spriteForPeak.material.opacity = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakData.time, 0, 1);
+        const scale = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakData.time, 0, 1);
+
+        spriteForPeak.material.opacity = scale;
+        lightForPeak.intensity = BASE_LIGHT_INTENSITY * scale;
       }
       else if (audioTime > peakData.end) {
-        spriteForPeak.material.opacity = THREE.MathUtils.mapLinear(audioTime, peakData.end, peakDisplayEnd, 1, 0);
+        const scale = THREE.MathUtils.mapLinear(audioTime, peakData.end, peakDisplayEnd, 1, 0);
+
+        spriteForPeak.material.opacity = scale;
+        lightForPeak.intensity = BASE_LIGHT_INTENSITY * scale;
       }
       else {
         spriteForPeak.material.opacity = 1;
+        lightForPeak.intensity = BASE_LIGHT_INTENSITY;
       }
     }
   });
