@@ -25,6 +25,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
   const SIDES = 6;
   const RADIUS = 5;
   const LOOKAHEAD_PERIOD = 1.5;
+  const DECAY_PERIOD = 0.25;
   const PEAK_DEPTH_START = -200;
   const PEAK_DEPTH_END = -10;
   const BASE_COLOR = new THREE.Color(0x770077);
@@ -65,16 +66,17 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
     // Determine if we need to fill the ring buffer with any new meshes
     for (let peakIdx = nextUnrenderedPeakIndex; peakIdx < props.trackAnalysis.beat.length; peakIdx++) {
       const curPeak = props.trackAnalysis.beat[peakIdx];
-      const nextPeakStart = curPeak.time - LOOKAHEAD_PERIOD;
+      const peakDisplayStart = curPeak.time - LOOKAHEAD_PERIOD;
+      const peakDisplayEnd = curPeak.end + DECAY_PERIOD;
 
       // See if we're already too late for this peak - if so, skip ahead
-      if (lastRenderTime > curPeak.end) {
+      if (lastRenderTime > peakDisplayEnd) {
         nextUnrenderedPeakIndex++;
         continue;
       }
 
       // Now see if we're too early for this peak - if so, exit out
-      if (nextPeakStart > audioTime) {
+      if (peakDisplayStart > audioTime) {
         break;
       }
 
@@ -99,32 +101,36 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
         continue;
       }
 
-      const startRenderTime = Math.max(peakData.time - LOOKAHEAD_PERIOD, 0);
-      const startEmissiveTime = startRenderTime + ((peakData.time - startRenderTime) * 0.5);
-      const endRenderTime = peakData.end + 0.25;
+      const peakDisplayStart = peakData.time - LOOKAHEAD_PERIOD;
+      const peakEmissiveStart = peakDisplayStart + (LOOKAHEAD_PERIOD * 0.5);
+      const peakDisplayEnd = peakData.end + DECAY_PERIOD;
 
       // See if we've finished peaking, which means we should hide the mesh
-      if (startRenderTime > audioTime || endRenderTime < lastRenderTime) {
+      if (peakDisplayStart > audioTime || peakDisplayEnd < lastRenderTime) {
         meshForPeak.visible = false;
         continue;
       }
 
       // Make the mesh visible and lerp it to zoom in
       meshForPeak.visible = true;
-      meshForPeak.position.z = THREE.MathUtils.lerp(PEAK_DEPTH_START, PEAK_DEPTH_END, (audioTime - startRenderTime) / (endRenderTime - startRenderTime));
+      meshForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, PEAK_DEPTH_START, PEAK_DEPTH_END);
 
-      // Tweak properties if we're during the actual beat
+      // Tweak shininess and scaling if we're during the actual beat
       const material = (meshForPeak.material as THREE.MeshPhongMaterial);
 
-      if (audioTime >= startEmissiveTime && audioTime < peakData.end) {
-        material.shininess = THREE.MathUtils.mapLinear(audioTime, startEmissiveTime, peakData.end, 0.5, 1.0);
+      // Scale shininess between the emission start and the end of the peak
+      if (audioTime >= peakEmissiveStart && audioTime < peakData.end) {
+        material.shininess = THREE.MathUtils.mapLinear(audioTime, peakEmissiveStart, peakData.end, 0.5, 1.0);
+      }
+      else if (audioTime >= peakData.end) {
+        material.shininess = THREE.MathUtils.mapLinear(audioTime, peakData.end, peakDisplayEnd, 1, 0.5);
       }
       else {
         material.shininess = 0.5;
       }
 
-      if (audioTime >= peakData.time && audioTime < endRenderTime) {
-        meshForPeak.scale.setScalar(THREE.MathUtils.mapLinear(audioTime, peakData.time, endRenderTime, 1.0, 2.0));
+      if (audioTime >= peakData.time && audioTime < peakDisplayEnd) {
+        meshForPeak.scale.setScalar(THREE.MathUtils.mapLinear(audioTime, peakData.time, peakDisplayEnd, 1.0, 2.0));
       }
       else {
         meshForPeak.scale.setScalar(1);
@@ -136,7 +142,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
     <group>
       {availableMeshElements}
     </group>
-  )
+  );
 }
 
 export default BeatQueue;
