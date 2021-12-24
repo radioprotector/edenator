@@ -13,10 +13,11 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
   const availableTrebleGroupsRing = useRef<THREE.Group[]>([]);
   const QUEUE_SIZE = 20;
   const LOOKAHEAD_PERIOD = 0.1;
-  const DECAY_PERIOD = 1;
+  const DECAY_PERIOD = 0.5;
   const PEAK_DEPTH_START = -200;
   const PEAK_DEPTH_END = 10;
   const BASE_LIGHT_INTENSITY = 20;
+  const BASE_LIGHT_DISTANCE = 20;
 
   const textures = useTexture({
     corona: 'textures/corona.png',
@@ -39,7 +40,7 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
         >
           <spriteMaterial
             color={0xffaaff}
-            map={textures.wavering}
+            map={textures.extendring}
             depthWrite={false}
             transparent={true}
             blending={THREE.CustomBlending}
@@ -51,6 +52,7 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
         <pointLight
           color={0xffffff}
           castShadow={false}
+          distance={BASE_LIGHT_DISTANCE}
         />
       </group>
     });
