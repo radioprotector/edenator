@@ -5,19 +5,23 @@ import { useTexture } from '@react-three/drei';
 
 import { TrackAnalysis } from './TrackAnalysis';
 
+const FULL_RADIANS = 2 * Math.PI;
+
 function buildLineRingGeometry(trackAnalysis: TrackAnalysis, innerRadius: number, maxOuterRadius: number, perturbAngle: number): THREE.BufferGeometry {
   const points: THREE.Vector3[] = [];
+  const LINE_COUNT = 150;
+  const ANGLE_PER_LINE = 360 / LINE_COUNT;
   const extraLength = Math.max(maxOuterRadius - innerRadius, 1);
-  const ringSeed = innerRadius / Math.LOG2E;
+  const ringSeed = innerRadius;
 
   for (let pointNum = 0; pointNum < 150; pointNum++) {
-    const angle = (trackAnalysis.getTrackSeededRandomInt(0, 359, pointNum * ringSeed) + perturbAngle) * THREE.MathUtils.DEG2RAD;
-    const length = trackAnalysis.getTrackSeededRandomFloat(0.5, extraLength, pointNum * ringSeed);
+    const angle = ((pointNum * ANGLE_PER_LINE) + perturbAngle) * THREE.MathUtils.DEG2RAD;
+    const outerRadius = innerRadius + trackAnalysis.getTrackSeededRandomFloat(0.25, extraLength, pointNum * ringSeed);
     const x = Math.cos(angle);
     const y = Math.sin(angle);
 
     points.push(new THREE.Vector3(x * innerRadius, y * innerRadius, 0));
-    points.push(new THREE.Vector3(x * (innerRadius + length), y * (innerRadius + length), 0));
+    points.push(new THREE.Vector3(x * outerRadius, y * outerRadius, 0));
   }
 
   const geometry = new THREE.BufferGeometry();
@@ -41,15 +45,15 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
   // Set up the geometry for the line "rings"
   const firstRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(props.trackAnalysis, 75, 95, 0);
+    return buildLineRingGeometry(props.trackAnalysis, 100, 120, 0);
   }, [props.trackAnalysis]);
 
   const secondRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(props.trackAnalysis, 105, 125, 15);
+    return buildLineRingGeometry(props.trackAnalysis, 125, 145, 15);
   }, [props.trackAnalysis]);
 
   const thirdRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(props.trackAnalysis, 135, 155, 30);
+    return buildLineRingGeometry(props.trackAnalysis, 150, 170, 30);
   }, [props.trackAnalysis]);
 
   // Determine motion amounts based on the BPM
@@ -80,15 +84,17 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     }
 
     const ringPercentage = (currentTrackTime % ringCycleSeconds) / ringCycleSeconds;
+    const ringRotation = Math.sin(ringPercentage * FULL_RADIANS);
     const starPercentage = (currentTrackTime % starCycleSeconds) / starCycleSeconds;
+    const starRotation = Math.sin(starPercentage * FULL_RADIANS);
 
-    firstLineRing.current.rotation.set(0, 0, Math.sin(ringPercentage * Math.PI * 2));
-    secondLineRing.current.rotation.set(0, 0, 0.75 * Math.sin(ringPercentage * Math.PI * 2));
-    thirdLineRing.current.rotation.set(0, 0, 0.5 * Math.sin(ringPercentage * Math.PI * 2));
+    firstLineRing.current.rotation.set(0, 0, ringRotation);
+    secondLineRing.current.rotation.set(0, 0, 0.75 * ringRotation);
+    thirdLineRing.current.rotation.set(0, 0, 0.5 * ringRotation);
 
-    firstStarLayer.current.position.x = 50 * Math.sin(starPercentage * Math.PI * 2);
-    secondStarLayer.current.position.x = 100 * Math.sin(starPercentage * Math.PI * 2);
-    thirdStarLayer.current.position.x = 150 * Math.sin(starPercentage * Math.PI * 2);
+    firstStarLayer.current.position.x = 50 * starRotation;
+    secondStarLayer.current.position.x = 100 * starRotation;
+    thirdStarLayer.current.position.x = 150 * starRotation;
   })
 
   return (
