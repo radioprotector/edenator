@@ -59,6 +59,21 @@ export class TrackAnalysis
     // Because we're using Math.floor on the random result, we need to go 1 *above* the high
     return low + Math.floor(random * (high - low + 1));
   }
+
+  /**
+   * Gets a random float that is deterministic for the track and specified seed.
+   * @param min The minimum possible floating-point value.
+   * @param max The maximum possible floating-point value.
+   * @param seed The seed to use.
+   */
+  public getTrackSeededRandomFloat(min: number, max: number, seed: number) {
+    // Because our random number seeds aren't as clustered around pi, this should vary *enough* for our purposes
+    // Something like THREE.MathUtils.seededRandom exhibits very little variation between small seed increments of 1,
+    // which doesn't work well for our purposes.
+    const random = (Math.sin(this.trackHash + seed) + 1) / 2;
+
+    return min + (random * (max - min));    
+  }
 }
 
 export const EmptyTrackAnalysis = new TrackAnalysis();
