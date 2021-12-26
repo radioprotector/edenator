@@ -9,14 +9,13 @@ const FULL_RADIANS = 2 * Math.PI;
 
 function buildLineRingGeometry(trackAnalysis: TrackAnalysis, innerRadius: number, maxOuterRadius: number, perturbAngle: number): THREE.BufferGeometry {
   const points: THREE.Vector3[] = [];
-  const LINE_COUNT = 150;
+  const LINE_COUNT = 180;
   const ANGLE_PER_LINE = 360 / LINE_COUNT;
   const extraLength = Math.max(maxOuterRadius - innerRadius, 1);
-  const ringSeed = innerRadius;
 
-  for (let pointNum = 0; pointNum < 150; pointNum++) {
+  for (let pointNum = 0; pointNum < LINE_COUNT; pointNum++) {
     const angle = ((pointNum * ANGLE_PER_LINE) + perturbAngle) * THREE.MathUtils.DEG2RAD;
-    const outerRadius = innerRadius + trackAnalysis.getTrackSeededRandomFloat(0.25, extraLength, pointNum * ringSeed);
+    const outerRadius = innerRadius + trackAnalysis.getTrackSeededRandomFloat(0.25, extraLength, pointNum * innerRadius);
     const x = Math.cos(angle);
     const y = Math.sin(angle);
 
