@@ -9,7 +9,7 @@ const FULL_RADIANS = 2 * Math.PI;
 
 function buildLineRingGeometry(trackAnalysis: TrackAnalysis, innerRadius: number, maxOuterRadius: number, perturbAngle: number): THREE.BufferGeometry {
   const points: THREE.Vector3[] = [];
-  const LINE_COUNT = 180;
+  const LINE_COUNT = 120;
   const ANGLE_PER_LINE = 360 / LINE_COUNT;
   const extraLength = Math.max(maxOuterRadius - innerRadius, 1);
 
@@ -77,9 +77,11 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     ringGroup.current.visible = !props.trackAnalysis.isEmpty;
 
     let currentTrackTime = 0;
+    let currentTrackDuration = 0;
 
     if (props.audio.current !== null) {
       currentTrackTime = props.audio.current.currentTime;
+      currentTrackDuration = props.audio.current.duration;
     }
 
     // Rotate the line "rings" and shift the backgrounds over time
@@ -97,20 +99,41 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     thirdStarLayer.current.position.x = 150 * starRotation;
 
     // If we're currently playing, tweak based on the music
-    let ringIntensityFactor = 0.0;
+    let ringOpacityFactor = 0.0;
+    let ringScaleFactor = 0.0;
 
     if (currentTrackTime > 0 && props.analyser.current !== null) {
       const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
       props.analyser.current.getByteFrequencyData(frequencies);
 
       if (Number.isFinite(frequencies[15])) {
-        ringIntensityFactor = frequencies[15] / 255.0;
+        // Let this contribute to at most half of the opacity
+        ringOpacityFactor = (frequencies[15] / 255.0) / 2;
+      }
+
+      if (Number.isFinite(frequencies[8])) {
+        // Let this contribute to at most a 25% increase in scale
+        ringScaleFactor = (frequencies[8] / 255.0) / 4;
       }
     }
 
-    (firstLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.5 + (ringIntensityFactor / 2);
-    (secondLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.4 + (ringIntensityFactor / 2);
-    (thirdLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.3 + (ringIntensityFactor / 2);
+    (firstLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.5 + ringOpacityFactor;
+    (secondLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.4 + ringOpacityFactor;
+    (thirdLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.3 + ringOpacityFactor;
+
+    // If we are just coming off of an increase in scale, we want to ease back to the standard 1.0
+    const ringDampenedScale = firstLineRing.current.scale.x * 0.8;
+    const newRingScale = Math.max(1.0 + ringScaleFactor, ringDampenedScale);
+
+    firstLineRing.current.scale.x = firstLineRing.current.scale.y = newRingScale;
+    secondLineRing.current.scale.x = secondLineRing.current.scale.y = newRingScale;
+    thirdLineRing.current.scale.x = thirdLineRing.current.scale.y = newRingScale;
+
+    // Scale down all of the rings as we get closer to the end of the track
+    if (Number.isFinite(currentTrackDuration) && currentTrackDuration > 0) {
+      const ringGroupScale = THREE.MathUtils.mapLinear(currentTrackTime, 0, currentTrackDuration, 0.5, 1.5);
+      ringGroup.current.scale.x = ringGroup.current.scale.y = ringGroupScale;
+    }
   })
 
   return (
