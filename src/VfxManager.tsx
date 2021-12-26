@@ -1,13 +1,12 @@
 import { RefObject, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { EffectComposer, Bloom, GodRays, ColorDepth, Noise } from '@react-three/postprocessing';
-import { GodRaysEffect, ColorDepthEffect, NoiseEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
+import { EffectComposer, Bloom, GodRays, ColorDepth } from '@react-three/postprocessing';
+import { GodRaysEffect, ColorDepthEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
 function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }): JSX.Element {
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
   const colorDepthEffect = useRef<typeof ColorDepthEffect>(null!);
-  const noiseEffect = useRef<typeof NoiseEffect>(null!);
   
   useFrame((state, delta) => {
     if (props.audio.current === null || props.audio.current.currentTime <= 0 || props.analyser.current === null || godRaysEffect.current === null) {
@@ -16,14 +15,6 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
 
     const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
     props.analyser.current.getByteFrequencyData(frequencies);
-
-    // Adjust the intensity of the noise based on low frequencies
-    if (Number.isFinite(frequencies[0])) {
-      noiseEffect.current.blendMode.opacity.value = THREE.MathUtils.lerp(0.0, 0.03, frequencies[0] / 255.0);
-    }
-    else {
-      noiseEffect.current.blendMode.opacity.value = 0.0;
-    }
 
     // Pulse the intensity of the god rays based on low-mid frequencies
     // HACK: Party on the GodRaysMaterial and adjust values based on our frequency
@@ -82,10 +73,6 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       <ColorDepth
         ref={colorDepthEffect}
         bits={4}
-        opacity={0.0}
-      />
-      <Noise
-        ref={noiseEffect}
         opacity={0.0}
       />
     </EffectComposer>
