@@ -5,6 +5,18 @@ import { TrackAnalysis } from "./TrackAnalysis";
 
 const ANALYZER_SAMPLE_RATE = 44100;
 
+interface PeakAnalysisArgs {
+  minFrequency: number | null;
+  
+  maxFrequency: number | null;
+  
+  expectedMaxPeaksPerMinute: number;
+
+  absoluteThreshold: number;
+
+  relativeThreshold: number;
+}
+
 /**
  * Attempts to get all media tags for the specified file.
  * @param file The file to open.
@@ -161,7 +173,7 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
   });
 }
 
-function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFrequency: number | null, maxFrequency: number | null, expectedMaximumPeaksPerMinute: number): Promise<Peak[]> {
+function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisArgs: PeakAnalysisArgs): Promise<Peak[]> {
   // For processing, downmix to mono
   // XXX: Look at getting webkitOfflineAudioContext supported as well
   const audioContext = new window.OfflineAudioContext(1, overallVolume.length, ANALYZER_SAMPLE_RATE);
@@ -174,16 +186,16 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
       bufferSource.buffer = decodedData;
 
       // Add a minimum frequency filter if we need it
-      if (minFrequency != null) {
-        const minFrequencyFilter = new BiquadFilterNode(audioContext, { type: 'highpass', Q: 1, frequency: minFrequency });
+      if (analysisArgs.minFrequency != null) {
+        const minFrequencyFilter = new BiquadFilterNode(audioContext, { type: 'highpass', Q: 1, frequency: analysisArgs.minFrequency });
 
         lastNode.connect(minFrequencyFilter);
         lastNode = minFrequencyFilter;
       }
 
       // Do the same for the maximum frequency
-      if (maxFrequency != null) {
-        const maxFrequencyFilter = new BiquadFilterNode(audioContext, { type: 'lowpass', Q: 1, frequency: maxFrequency });
+      if (analysisArgs.maxFrequency != null) {
+        const maxFrequencyFilter = new BiquadFilterNode(audioContext, { type: 'lowpass', Q: 1, frequency: analysisArgs.maxFrequency });
 
         lastNode.connect(maxFrequencyFilter);
         lastNode = maxFrequencyFilter;
@@ -195,12 +207,10 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
       return audioContext.startRendering();
     })
     .then((renderedBuffer: AudioBuffer) => {
-      console.debug(`buffer for ${minFrequency} to ${maxFrequency}`, renderedBuffer);
+      console.debug(`buffer for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency}`, renderedBuffer);
       const frames = renderedBuffer.getChannelData(0);
       const peaksList: Peak[] = [];
       const peaksHistogram: { [roundedIntensity: string]: number } = {};
-      const ABSOLUTE_THRESHOLD = 0.4;
-      const RELATIVE_THRESHOLD = 0.5;
 
       for(let frameIdx = 0; frameIdx < frames.length;)
       {
@@ -214,7 +224,7 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
         let currentFrameIntensityNormalized = currentFrameIntensity / overallVolume[frameIdx];
 
         // See if we're ready to start a new peak
-        if (currentFrameIntensity >= ABSOLUTE_THRESHOLD && currentFrameIntensityNormalized >= RELATIVE_THRESHOLD)
+        if (currentFrameIntensity >= analysisArgs.absoluteThreshold && currentFrameIntensityNormalized >= analysisArgs.relativeThreshold)
         {
           // Start a new peak, and mark when it was encountered
           const newPeak = {
@@ -247,7 +257,7 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
             // if (currentFrameIntensityNormalized > 1) {
             //   console.debug('INTENSITY OUT OF RANGE', { currentFrameIntensity, currentFrameIntensityNormalized });
             // }
-          } while(currentFrameIntensity >= ABSOLUTE_THRESHOLD && currentFrameIntensityNormalized >= RELATIVE_THRESHOLD)
+          } while(currentFrameIntensity >= analysisArgs.absoluteThreshold && currentFrameIntensityNormalized >= analysisArgs.relativeThreshold)
 
           // Now calculate the end of the peak
           newPeak.end = frameIdx / ANALYZER_SAMPLE_RATE;
@@ -272,10 +282,10 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
         frameIdx++;
       }
 
-      console.debug(`peak histogram for ${minFrequency} to ${maxFrequency}`, peaksHistogram);
+      console.debug(`peak histogram for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency}`, peaksHistogram);
 
       // See if we have too many peaks - if so, trim
-      const expectedMaximumPeaks = Math.ceil(expectedMaximumPeaksPerMinute * renderedBuffer.duration / 60);
+      const expectedMaximumPeaks = Math.ceil(analysisArgs.expectedMaxPeaksPerMinute * renderedBuffer.duration / 60);
 
       if (peaksList.length > expectedMaximumPeaks) {
         // Look at the histogram to figure out the cutoff.
@@ -302,7 +312,7 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, minFreque
         }
 
         // Once we determine the cutoff, filter out elements that don't match
-        console.debug(`cutting off peaks for ${minFrequency} to ${maxFrequency} at ${intensityCutoff}`);
+        console.debug(`cutting off peaks for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency} at ${intensityCutoff}`);
         return peaksList.filter((p) => p.intensityNormalized >= intensityCutoff);
       }
 
@@ -314,10 +324,37 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
   const tags = getTrackTags(file);
   const overallVolume = await file.arrayBuffer().then((byteBuffer) => getTrackVolume(byteBuffer));
 
-  const subBass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, 20, 50, 60));
-  const bass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, 50, 90, 120));
-  const beat = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, 90, 250, 300));
-  const treble = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, 2048, null, 120));
+  const subBass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {
+    minFrequency: 20,
+    maxFrequency: 50,
+    expectedMaxPeaksPerMinute: 60,
+    absoluteThreshold: 0.4,
+    relativeThreshold: 0.5
+  }));
+
+  const bass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {
+    minFrequency: 50,
+    maxFrequency: 90,
+    expectedMaxPeaksPerMinute: 120,
+    absoluteThreshold: 0.4,
+    relativeThreshold: 0.5
+  }));
+
+  const beat = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {
+    minFrequency: 90,
+    maxFrequency: 250,
+    expectedMaxPeaksPerMinute: 300,
+    absoluteThreshold: 0.4,
+    relativeThreshold: 0.5
+  }));
+
+  const treble = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {
+    minFrequency: 2048,
+    maxFrequency: null,
+    expectedMaxPeaksPerMinute: 120,
+    absoluteThreshold: 0.35,
+    relativeThreshold: 0.4
+  }));
 
   return Promise.all([tags, subBass, bass, beat, treble])
     .then((values): TrackAnalysis => {
