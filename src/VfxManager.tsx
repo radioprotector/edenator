@@ -1,12 +1,11 @@
 import { RefObject, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { EffectComposer, Bloom, GodRays, ColorDepth } from '@react-three/postprocessing';
-import { GodRaysEffect, ColorDepthEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
+import { EffectComposer, Bloom, GodRays } from '@react-three/postprocessing';
+import { GodRaysEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
 function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }): JSX.Element {
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
-  const colorDepthEffect = useRef<typeof ColorDepthEffect>(null!);
   
   useFrame((state, delta) => {
     if (props.audio.current === null || props.audio.current.currentTime <= 0 || props.analyser.current === null || godRaysEffect.current === null) {
@@ -31,18 +30,6 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       godRaysMaterial.uniforms.decay.value = 0.4;
       godRaysMaterial.uniforms.exposure.value = 0.4;
     }
-
-    // Scale the intensity of the color "bitcrush" based on the upper frequency ranges
-    let upperFrequenciesSize = Math.ceil(frequencies.length / 4);
-    let upperFrequencyAverage = 0.0;
-
-    for (let frequencyBinIndex = frequencies.length - upperFrequenciesSize; frequencyBinIndex < frequencies.length; frequencyBinIndex++) {
-      if (Number.isFinite(frequencies[frequencyBinIndex])) {
-        upperFrequencyAverage += frequencies[frequencyBinIndex];
-      }
-    }
-
-    colorDepthEffect.current.blendMode.opacity.value = THREE.MathUtils.lerp(0.0, 0.5, upperFrequencyAverage / (upperFrequenciesSize * 255.0));
   });
 
   return (
@@ -69,11 +56,6 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         width={Resizer.AUTO_SIZE}
         height={Resizer.AUTO_SIZE}
         kernelSize={KernelSize.MEDIUM}
-      />
-      <ColorDepth
-        ref={colorDepthEffect}
-        bits={4}
-        opacity={0.0}
       />
     </EffectComposer>
   )
