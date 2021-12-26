@@ -83,6 +83,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
       currentTrackTime = props.audio.current.currentTime;
     }
 
+    // Rotate the line "rings" and shift the backgrounds over time
     const ringPercentage = (currentTrackTime % ringCycleSeconds) / ringCycleSeconds;
     const ringRotation = Math.sin(ringPercentage * FULL_RADIANS);
     const starPercentage = (currentTrackTime % starCycleSeconds) / starCycleSeconds;
@@ -95,6 +96,22 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     firstStarLayer.current.position.x = 50 * starRotation;
     secondStarLayer.current.position.x = 100 * starRotation;
     thirdStarLayer.current.position.x = 150 * starRotation;
+
+    // If we're currently playing, tweak based on the music
+    let ringIntensityFactor = 0.0;
+
+    if (currentTrackTime > 0 && props.analyser.current !== null) {
+      const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
+      props.analyser.current.getByteFrequencyData(frequencies);
+
+      if (Number.isFinite(frequencies[15])) {
+        ringIntensityFactor = frequencies[15] / 255.0;
+      }
+    }
+
+    (firstLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.5 + (ringIntensityFactor / 2);
+    (secondLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.4 + (ringIntensityFactor / 2);
+    (thirdLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.3 + (ringIntensityFactor / 2);
   })
 
   return (
@@ -126,7 +143,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           <lineBasicMaterial
             color={0xffffaa}
             transparent={true}
-            opacity={0.35}
+            opacity={0.4}
             fog={false}
           />
         </lineSegments>
@@ -141,7 +158,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           <lineBasicMaterial
             color={0xffffaa}
             transparent={true}
-            opacity={0.2}
+            opacity={0.3}
             fog={false}
           />
         </lineSegments>
