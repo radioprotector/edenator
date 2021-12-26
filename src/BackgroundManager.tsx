@@ -129,6 +129,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             transparent={true}
             opacity={0.5}
             fog={false}
+            precision={'lowp'}
           />
         </lineSegments>
         <lineSegments
@@ -144,6 +145,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             transparent={true}
             opacity={0.4}
             fog={false}
+            precision={'lowp'}
           />
         </lineSegments>
         <lineSegments
@@ -159,6 +161,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             transparent={true}
             opacity={0.3}
             fog={false}
+            precision={'lowp'}
           />
         </lineSegments>
       </group>
@@ -175,6 +178,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           map={textures.star_first}
           transparent={true}
           fog={false}
+          precision={'lowp'}
         />
       </mesh>
       <mesh
@@ -190,6 +194,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           map={textures.star_second}
           transparent={true}
           fog={false}
+          precision={'lowp'}
         />
       </mesh>
       <mesh
@@ -205,6 +210,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           map={textures.star_third}
           transparent={true}
           fog={false}
+          precision={'lowp'}
         />
       </mesh>
     </group>
