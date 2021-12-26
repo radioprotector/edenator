@@ -191,7 +191,12 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
             ref={(plane: THREE.Mesh) => tunnelSegmentPlanes.current[segmentIndex] = plane}
           >
             <planeGeometry />
-            <meshBasicMaterial color={fillerColor} side={THREE.DoubleSide} transparent={true} opacity={0.5} />
+            <meshBasicMaterial
+              color={fillerColor}
+              side={THREE.DoubleSide}
+              transparent={true}
+              opacity={0.6}
+            />
           </mesh>
         </group>
       });
