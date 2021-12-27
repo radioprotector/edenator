@@ -275,8 +275,8 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
             peaksHistogram[roundedIntensity] = 1;
           }
 
-          // Move forward 1/32 of a second
-          frameIdx += Math.ceil(ANALYZER_SAMPLE_RATE / 32);
+          // Move forward 1/16 of a second
+          frameIdx += Math.ceil(ANALYZER_SAMPLE_RATE / 16);
         }
 
         frameIdx++;
