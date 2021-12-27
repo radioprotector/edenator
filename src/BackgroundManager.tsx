@@ -128,14 +128,14 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         ringOpacityFactor = (frequencies[15] / 255.0) / 2;
       }
 
-      if (Number.isFinite(frequencies[8])) {
+      if (Number.isFinite(frequencies[7])) {
         // Let this contribute to at most a 25% increase in scale
-        ringScaleFactor = (frequencies[8] / 255.0) / 4;
+        ringScaleFactor = (frequencies[7] / 255.0) / 4;
       }
 
-      if (Number.isFinite(frequencies[4])) {
+      if (Number.isFinite(frequencies[47])) {
         // Make the star glows visible as appropriate
-        starFlashOpacityFactor = (frequencies[4] / 255.0);
+        starFlashOpacityFactor = (frequencies[47] / 255.0) / 1.5;
       }
     }
 
@@ -224,7 +224,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xff66ff}
+            color={0xffffff}
             map={textures.star_first_flash}
             transparent={true}
             opacity={0.0}
@@ -241,9 +241,10 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xff66ff}
+            color={0xaa66aa}
             map={textures.star_first}
             transparent={true}
+            opacity={0.5}
             fog={false}
             precision={'lowp'}
           />
@@ -258,7 +259,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xffaaff}
+            color={0xffffff}
             map={textures.star_second_flash}
             transparent={true}
             opacity={0.0}
@@ -275,9 +276,10 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xffaaff}
+            color={0xccaacc}
             map={textures.star_second}
             transparent={true}
+            opacity={0.5}
             fog={false}
             precision={'lowp'}
           />
@@ -292,7 +294,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xffccff}
+            color={0xffffff}
             map={textures.star_third_flash}
             transparent={true}
             opacity={0.0}
@@ -311,7 +313,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           <meshBasicMaterial
             color={0xffccff}
             map={textures.star_third}
-            transparent={false} // Make this last one non-transparent
+            transparent={true}
+            opacity={0.5}
             fog={false}
             precision={'lowp'}
           />
