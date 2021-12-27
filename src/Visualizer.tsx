@@ -30,37 +30,6 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       <FrequencyGrid audio={props.audio} analyser={props.analyser} trackAnalysis={props.trackAnalysis} />
       <TrebleQueue audio={props.audio} trackAnalysis={props.trackAnalysis} audioLastSeeked={props.audioLastSeeked} />
       <BackgroundManager audio={props.audio} analyser={props.analyser} trackAnalysis={props.trackAnalysis} />
-      {/* 
-        These are just to help visualize positioned elements relative to the camera.
-          o Red - x
-          o Green - y
-          o Blue - z
-        Negative values use a box, positive values use a sphere.
-      */}
-      {/* <mesh position={[0, 0, -100]}>
-        <boxGeometry args={[2, 2, 2]} />
-        <meshBasicMaterial color={0x0000ff} />
-      </mesh>
-      <mesh position={[0, 0, 100]}>
-        <sphereGeometry />
-        <meshBasicMaterial color={0x0000ff} />
-      </mesh>
-      <mesh position={[0, -10, 0]}>
-        <boxGeometry args={[2, 2, 2]} />
-        <meshBasicMaterial color={0x00ff00} />
-      </mesh>
-      <mesh position={[0, 10, 0]}>
-        <sphereGeometry />
-        <meshBasicMaterial color={0x00ff00} />
-      </mesh>
-      <mesh position={[-10, 0, 0]}>
-        <boxGeometry args={[2, 2, 2]} />
-        <meshBasicMaterial color={0xff0000} />
-      </mesh>
-      <mesh position={[10, 0, 0]}>
-        <sphereGeometry />
-        <meshBasicMaterial color={0xff0000} />
-      </mesh> */}
       <VfxManager audio={props.audio} analyser={props.analyser} sunMesh={sunMesh} />
     </Canvas>
   );
