@@ -1,8 +1,8 @@
-import React, { useRef, useCallback, useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect, Suspense } from 'react';
 import { Stats } from '@react-three/drei';
 
 import { analyzeTrack } from './Analyzer';
-import { EmptyTrackAnalysis, TrackAnalysis } from './TrackAnalysis';
+import { useStore } from './visualizerStore';
 
 import './App.css';
 import Visualizer from './Visualizer';
@@ -11,10 +11,9 @@ function App(): JSX.Element {
   // Keep track of what we played last so we can free the object URL when switching tracks
   let playingFileUrl: string = '';
 
-  // Keep track of our current song analysis as well as a sentinel timestamp for when we've skipped around
-  // and need to ensure that all time-based queues are alerted
-  const [currentAnalysis, updateCurrentAnalysis] = useState(EmptyTrackAnalysis);
-  const [audioLastSeeked, indicateAudioSeeked] = useState(0);
+  // Wire up store hooks
+  const setStoreAnalysis = useStore(store => store.setAnalysis);
+  const setStoreAudioSeeked = useStore(store => store.indicateAudioSeeked);
 
   // XXX: Investigate supprting webkitAudioContext
   const audioContext = useMemo(() => new AudioContext(), []);
@@ -51,7 +50,7 @@ function App(): JSX.Element {
       const trackFile = sourceFileElement.current.files[0];
 
       analyzeTrack(trackFile)
-        .then((analyzerResult: TrackAnalysis) => {
+        .then((analyzerResult) => {
           console.log(analyzerResult);
 
           // Create a URL for the new file
@@ -70,8 +69,8 @@ function App(): JSX.Element {
           }
 
           playingFileUrl = newAudioUrl;
-          updateCurrentAnalysis(analyzerResult);
-          indicateAudioSeeked(Date.now());
+          setStoreAnalysis(analyzerResult);
+          setStoreAudioSeeked();
         })
         .catch((reason: any) => {
           console.error(reason);
@@ -86,21 +85,18 @@ function App(): JSX.Element {
     }
   };
 
-  // When the audio track changes position abnormally, we need to re-set time-based indices
-  const onAudioSeeked = () => {
-    // console.debug('audio seek');
-    indicateAudioSeeked(Date.now());
-  };
-
   // Update the page title based on the currently playing song
-  useEffect(() => {
-    if (currentAnalysis !== null && currentAnalysis.artist !== '' && currentAnalysis.title !== '') {
-      document.title = `Edenator (${currentAnalysis.artist} - ${currentAnalysis.title})`;
-    }
-    else {
-      document.title = 'Edenator';
-    }
-  }, [currentAnalysis])
+  useEffect(() => useStore.subscribe(
+    (state) => state.analysis, 
+    (newAnalysis) => {
+      if (newAnalysis !== null && newAnalysis.artist !== '' && newAnalysis.title !== '') {
+        document.title = `Edenator (${newAnalysis.artist} - ${newAnalysis.title})`;
+      }
+      else {
+        document.title = 'Edenator';
+      }
+    }),
+    []);
 
   return (
     <div>
@@ -117,7 +113,7 @@ function App(): JSX.Element {
       <audio
         ref={audioPlayerRef}
         id="audioPlayer"
-        onSeeked={onAudioSeeked}
+        onSeeked={setStoreAudioSeeked}
         controls>
       </audio>
       <div id="canvas-container">
@@ -125,8 +121,6 @@ function App(): JSX.Element {
           <Visualizer
             audio={audioPlayerElement}
             analyser={audioAnalyser}
-            trackAnalysis={currentAnalysis}
-            audioLastSeeked={audioLastSeeked}
           />
         </Suspense>
       </div>

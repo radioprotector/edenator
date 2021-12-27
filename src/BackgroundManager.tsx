@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 
 import { TrackAnalysis } from './TrackAnalysis';
+import { useStore } from './visualizerStore';
 
 const FULL_RADIANS = 2 * Math.PI;
 
@@ -28,8 +29,7 @@ function buildLineRingGeometry(trackAnalysis: TrackAnalysis, innerRadius: number
   return geometry; 
 }
 
-
-function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }): JSX.Element {
+function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Load background textures
   const textures = useTexture({
     star_first: 'backgrounds/star-60.png',
@@ -52,27 +52,30 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     tex.repeat.setScalar(4);
   });
 
+  const trackAnalysis = useStore(state => state.analysis);
+  const backgroundTheme = useStore(state => state.theme.background); 
+
   // Set up the geometry for the line "rings"
   const firstRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(props.trackAnalysis, 100, 120, 0);
-  }, [props.trackAnalysis]);
+    return buildLineRingGeometry(trackAnalysis, 100, 120, 0);
+  }, [trackAnalysis]);
 
   const secondRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(props.trackAnalysis, 125, 145, 15);
-  }, [props.trackAnalysis]);
+    return buildLineRingGeometry(trackAnalysis, 125, 145, 15);
+  }, [trackAnalysis]);
 
   const thirdRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(props.trackAnalysis, 150, 170, 30);
-  }, [props.trackAnalysis]);
+    return buildLineRingGeometry(trackAnalysis, 150, 170, 30);
+  }, [trackAnalysis]);
 
   // Determine motion amounts based on the BPM
   const ringCycleSeconds = useMemo(() => {
-    return props.trackAnalysis.secondsPerMeasure * 8;
-  }, [props.trackAnalysis]);
+    return trackAnalysis.secondsPerMeasure * 8;
+  }, [trackAnalysis]);
 
   const starCycleSeconds = useMemo(() => {
-    return props.trackAnalysis.secondsPerMeasure * 16;
-  }, [props.trackAnalysis]);
+    return trackAnalysis.secondsPerMeasure * 16;
+  }, [trackAnalysis]);
 
   const firstStarLayer = useRef<THREE.Mesh>(null!);
   const secondStarLayer = useRef<THREE.Mesh>(null!);
@@ -87,7 +90,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
   
   useFrame(() => {
     // Hide the ring group when we don't have a track analysis
-    ringGroup.current.visible = !props.trackAnalysis.isEmpty;
+    ringGroup.current.visible = !trackAnalysis.isEmpty;
 
     let currentTrackTime = 0;
     let currentTrackDuration = 0;
@@ -174,7 +177,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             attach='geometry'
           />
           <lineBasicMaterial
-            color={0xffffaa}
+            color={backgroundTheme.burstLineColor}
             transparent={true}
             opacity={0.5}
             fog={false}
@@ -190,7 +193,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             attach='geometry'
           />
           <lineBasicMaterial
-            color={0xffffaa}
+            color={backgroundTheme.burstLineColor}
             transparent={true}
             opacity={0.4}
             fog={false}
@@ -206,7 +209,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             attach='geometry' 
           />
           <lineBasicMaterial
-            color={0xffffaa}
+            color={backgroundTheme.burstLineColor}
             transparent={true}
             opacity={0.3}
             fog={false}
@@ -224,7 +227,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xffffff}
+            color={backgroundTheme.starFlashColor}
             map={textures.star_first_flash}
             transparent={true}
             opacity={0.0}
@@ -241,7 +244,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xaa66aa}
+            color={backgroundTheme.starColor}
             map={textures.star_first}
             transparent={true}
             opacity={0.5}
@@ -259,7 +262,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xffffff}
+            color={backgroundTheme.starFlashColor}
             map={textures.star_second_flash}
             transparent={true}
             opacity={0.0}
@@ -276,7 +279,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xccaacc}
+            color={backgroundTheme.starColor}
             map={textures.star_second}
             transparent={true}
             opacity={0.5}
@@ -294,7 +297,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xffffff}
+            color={backgroundTheme.starFlashColor}
             map={textures.star_third_flash}
             transparent={true}
             opacity={0.0}
@@ -311,7 +314,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
             args={[2000, 2000]}
           />
           <meshBasicMaterial
-            color={0xffccff}
+            color={backgroundTheme.starColor}
             map={textures.star_third}
             transparent={true}
             opacity={0.5}

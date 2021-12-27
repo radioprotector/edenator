@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 
 import { generateNumericArray } from './Utils';
 import { TrackAnalysis } from './TrackAnalysis';
+import { useStore } from './visualizerStore';
 
 const QUARTER_TURN = Math.PI / 2;
 
@@ -13,6 +14,61 @@ const SEGMENT_HEIGHT = 15;
 
 const SEGMENTS_PER_SIDE = 20;
 const START_DEPTH = SEGMENT_DEPTH;
+
+// When we normally try to display a standard box geometry using wireframes,
+// it will display each side using two triangles. We want pure lines,
+// so we'll use a set of lines (with appropriate scaling) to approximate quads.
+const boxLineGeometry = new THREE.BufferGeometry();
+
+boxLineGeometry.setFromPoints([
+  // Right line, front face
+  new THREE.Vector3(0.5, -0.5, 0.5),
+  new THREE.Vector3(0.5, 0.5, 0.5),
+
+  // Top line, front face
+  new THREE.Vector3(0.5, 0.5, 0.5),
+  new THREE.Vector3(-0.5, 0.5, 0.5),
+
+  // Left line, front face
+  new THREE.Vector3(-0.5, 0.5, 0.5),
+  new THREE.Vector3(-0.5, -0.5, 0.5),
+
+  // Bottom line, front face
+  new THREE.Vector3(-0.5, -0.5, 0.5),
+  new THREE.Vector3(0.5, -0.5, 0.5),
+
+  // Top-left faces connector
+  new THREE.Vector3(-0.5, 0.5, 0.5),
+  new THREE.Vector3(-0.5, 0.5, -0.5),
+
+  // Bottom-left faces connector
+  new THREE.Vector3(-0.5, -0.5, 0.5),
+  new THREE.Vector3(-0.5, -0.5, -0.5),
+
+  // Top-right faces connector
+  new THREE.Vector3(0.5, 0.5, 0.5),
+  new THREE.Vector3(0.5, 0.5, -0.5),
+
+  // Bottom-right faces connector
+  new THREE.Vector3(0.5, -0.5, 0.5),
+  new THREE.Vector3(0.5, -0.5, -0.5),
+
+  // Right line, back face
+  new THREE.Vector3(0.5, -0.5, -0.5),
+  new THREE.Vector3(0.5, 0.5, -0.5),
+
+  // Top line, back face
+  new THREE.Vector3(0.5, 0.5, -0.5),
+  new THREE.Vector3(-0.5, 0.5, -0.5),
+
+  // Left line, back face
+  new THREE.Vector3(-0.5, 0.5, -0.5),
+  new THREE.Vector3(-0.5, -0.5, -0.5),
+
+  // Bottom line, back face
+  new THREE.Vector3(-0.5, -0.5, -0.5),
+  new THREE.Vector3(0.5, -0.5, -0.5),
+]);
 
 const enum SegmentDisplay {
   SegmentHidden = 0,
@@ -101,69 +157,13 @@ function getDepthForSegment(segmentIndex: number): number {
   return START_DEPTH - (SEGMENT_DEPTH * (segmentIndex % SEGMENTS_PER_SIDE))
 }
 
-function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }): JSX.Element {
+function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   const HORIZ_OFFSET = 10;
   let nextBassIndex = 0;
   let nextSubBassIndex = 0;
-
-  // When we normally try to display a standard box geometry using wireframes,
-  // it will display each side using two triangles. We want pure lines,
-  // so we'll use a set of lines (with appropriate scaling) to approximate quads.
-  const boxLineGeometry = useMemo(() => {
-    const geometry = new THREE.BufferGeometry();
-
-    geometry.setFromPoints([
-      // Right line, front face
-      new THREE.Vector3(0.5, -0.5, 0.5),
-      new THREE.Vector3(0.5, 0.5, 0.5),
-
-      // Top line, front face
-      new THREE.Vector3(0.5, 0.5, 0.5),
-      new THREE.Vector3(-0.5, 0.5, 0.5),
-
-      // Left line, front face
-      new THREE.Vector3(-0.5, 0.5, 0.5),
-      new THREE.Vector3(-0.5, -0.5, 0.5),
-
-      // Bottom line, front face
-      new THREE.Vector3(-0.5, -0.5, 0.5),
-      new THREE.Vector3(0.5, -0.5, 0.5),
-
-      // Top-left faces connector
-      new THREE.Vector3(-0.5, 0.5, 0.5),
-      new THREE.Vector3(-0.5, 0.5, -0.5),
-
-      // Bottom-left faces connector
-      new THREE.Vector3(-0.5, -0.5, 0.5),
-      new THREE.Vector3(-0.5, -0.5, -0.5),
-
-      // Top-right faces connector
-      new THREE.Vector3(0.5, 0.5, 0.5),
-      new THREE.Vector3(0.5, 0.5, -0.5),
-
-      // Bottom-right faces connector
-      new THREE.Vector3(0.5, -0.5, 0.5),
-      new THREE.Vector3(0.5, -0.5, -0.5),
-
-      // Right line, back face
-      new THREE.Vector3(0.5, -0.5, -0.5),
-      new THREE.Vector3(0.5, 0.5, -0.5),
-
-      // Top line, back face
-      new THREE.Vector3(0.5, 0.5, -0.5),
-      new THREE.Vector3(-0.5, 0.5, -0.5),
-
-      // Left line, back face
-      new THREE.Vector3(-0.5, 0.5, -0.5),
-      new THREE.Vector3(-0.5, -0.5, -0.5),
-
-      // Bottom line, back face
-      new THREE.Vector3(-0.5, -0.5, -0.5),
-      new THREE.Vector3(0.5, -0.5, -0.5),
-    ]);
-
-    return geometry;
-  }, []);
+  
+  const trackAnalysis = useStore(state => state.analysis);
+  const bassTheme = useStore(state => state.theme.bass); 
 
   // Store references to each tunnel segment group and its constituent elements (box/plane)
   const tunnelSegments = useRef<THREE.Group[]>([]);
@@ -171,9 +171,6 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
   const tunnelSegmentPlanes = useRef<THREE.Mesh[]>([]);
 
   const tunnelSegmentElements = useMemo(() => {
-    const lineColor = new THREE.Color(0x8f074b);
-    const fillerColor = new THREE.Color(0x850707);
-
     return generateNumericArray(SEGMENTS_PER_SIDE * 2)
       .map((segmentIndex) => {
         return <group
@@ -185,14 +182,14 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
             scale={[SEGMENT_WIDTH, SEGMENT_HEIGHT, SEGMENT_DEPTH]}
           >
             <primitive object={boxLineGeometry} attach='geometry' />
-            <lineBasicMaterial color={lineColor} />
+            <lineBasicMaterial color={bassTheme.wireframeColor} />
           </lineSegments>   
           <mesh
             ref={(plane: THREE.Mesh) => tunnelSegmentPlanes.current[segmentIndex] = plane}
           >
             <planeGeometry />
             <meshBasicMaterial
-              color={fillerColor}
+              color={bassTheme.panelColor}
               side={THREE.DoubleSide}
               transparent={true}
               opacity={0.6}
@@ -200,13 +197,13 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
           </mesh>
         </group>
       });
-    }, [boxLineGeometry]);
+    }, [bassTheme]);
 
   // Determine the amount of time it should take for a segment to scroll the length of the tunnel
   const tunnelTraversalPeriodSeconds = useMemo(() => {
-      return props.trackAnalysis.secondsPerMeasure * 0.5 * SEGMENTS_PER_SIDE;
+      return trackAnalysis.secondsPerMeasure * 0.5 * SEGMENTS_PER_SIDE;
     },
-    [props.trackAnalysis]);
+    [trackAnalysis]);
 
   // Reset the initial arrangement when the track analysis changes
   useEffect(() => {
@@ -227,21 +224,22 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
       }
 
       // Randomize the presentation for initial display
-      randomizeTunnelSegment(segmentIndex, groupForSegment, planeForSegment, props.trackAnalysis, 0); 
+      randomizeTunnelSegment(segmentIndex, groupForSegment, planeForSegment, trackAnalysis, 0); 
     }
-  }, [props.trackAnalysis, tunnelSegments, tunnelSegmentPlanes]);
+  }, [trackAnalysis, tunnelSegments, tunnelSegmentPlanes]);
 
   // Ensure we reset the next bass endpoint when the track gets seeked -
   // useFrame will recalculate as needed 
-  useEffect(
+  useEffect(() => useStore.subscribe(
+    state => [state.analysis, state.audioLastSeeked],
     () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextBassIndex = 0;
 
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextSubBassIndex = 0;
-    },
-    [props.trackAnalysis, props.trackAnalysis.bass, props.trackAnalysis.subBass, props.audioLastSeeked]);
+    }),
+    []);
 
   useFrame(() => {
     // Determine the depth offset to apply to all segments
@@ -258,8 +256,8 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
     }
 
     // See if we're currently during a bass period
-    for(let bassIndex = nextBassIndex; bassIndex < props.trackAnalysis.bass.length; bassIndex++) {
-      const curBass = props.trackAnalysis.bass[bassIndex];
+    for(let bassIndex = nextBassIndex; bassIndex < trackAnalysis.bass.length; bassIndex++) {
+      const curBass = trackAnalysis.bass[bassIndex];
       // Ease in and out of the bass peak
       const startTime = curBass.time - 0.25;
       const endTime = curBass.end + 0.5;
@@ -290,8 +288,8 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
     }
 
     // See if we're currently during a bass period
-    for(let subBassIndex = nextSubBassIndex; subBassIndex < props.trackAnalysis.subBass.length; subBassIndex++) {
-      const curSubBass = props.trackAnalysis.subBass[subBassIndex];
+    for(let subBassIndex = nextSubBassIndex; subBassIndex < trackAnalysis.subBass.length; subBassIndex++) {
+      const curSubBass = trackAnalysis.subBass[subBassIndex];
       // Ease in and out of the sub-bass peak
       const startTime = curSubBass.time - 0.5;
       const endTime = curSubBass.end + 1.5;
@@ -332,7 +330,7 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked
         // If this is the first time we've had to re-position the wrapped element, randomize the segment's appearance
         if (segmentDepth < segment.position.z) {
           const planeForSegment = tunnelSegmentPlanes.current[segmentIndex];
-          randomizeTunnelSegment(segmentIndex, segment, planeForSegment, props.trackAnalysis, currentTrackTime);
+          randomizeTunnelSegment(segmentIndex, segment, planeForSegment, trackAnalysis, currentTrackTime);
         }
       }
 

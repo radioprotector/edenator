@@ -2,8 +2,8 @@ import { RefObject, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
+import { useStore } from './visualizerStore';
 import { generateNumericArray } from './Utils';
-import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
 
 function getBasePosition(sideIdx: number, totalSides: number, scale: number): THREE.Vector3 {
@@ -18,7 +18,7 @@ function getBasePosition(sideIdx: number, totalSides: number, scale: number): TH
   return new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(scale);
 }
 
-function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }): JSX.Element {
+function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
   let nextAvailableMeshIndex = 0;
   const availableMeshesRing = useRef<THREE.Mesh[]>([]);
@@ -28,7 +28,9 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
   const DECAY_PERIOD = 0.25;
   const PEAK_DEPTH_START = -200;
   const PEAK_DEPTH_END = -10;
-  const BASE_COLOR = new THREE.Color(0x770077);
+
+  const trackAnalysis = useStore(state => state.analysis);
+  const beatTheme = useStore(state => state.theme.beat);
 
   // Generate available meshes for use in a ring buffer
   const availableMeshElements = 
@@ -40,20 +42,22 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
         key={sideNumber}
       >
         <sphereGeometry />
-        <meshPhongMaterial color={BASE_COLOR} />
+        <meshPhongMaterial color={beatTheme.color} />
       </mesh>
     });
 
   // Ensure we reset the next peak index when analysis changes (or we seeked).
   // We're okay with just blowing away these values and letting useFrame re-calculate when it needs to
-  useEffect(
+  useEffect(() => useStore.subscribe(
+    state => [state.analysis, state.audioLastSeeked],
     () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextUnrenderedPeakIndex = 0;
+      
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextAvailableMeshIndex = 0;
-    },
-    [props.trackAnalysis, props.trackAnalysis.beat, props.audioLastSeeked]);
+    }),
+    []);
 
   useFrame((state, delta) => {
     if (props.audio.current === null || availableMeshesRing.current === null) {
@@ -64,8 +68,8 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked:
     const lastRenderTime = Math.max(audioTime - delta, 0);
 
     // Determine if we need to fill the ring buffer with any new meshes
-    for (let peakIdx = nextUnrenderedPeakIndex; peakIdx < props.trackAnalysis.beat.length; peakIdx++) {
-      const curPeak = props.trackAnalysis.beat[peakIdx];
+    for (let peakIdx = nextUnrenderedPeakIndex; peakIdx < trackAnalysis.beat.length; peakIdx++) {
+      const curPeak = trackAnalysis.beat[peakIdx];
       const peakDisplayStart = curPeak.time - LOOKAHEAD_PERIOD;
       const peakDisplayEnd = curPeak.end + DECAY_PERIOD;
 

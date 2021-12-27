@@ -3,9 +3,9 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
 import { generateNumericArray } from './Utils';
-import { TrackAnalysis } from './TrackAnalysis';
+import { useStore } from './visualizerStore';
 
-function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, trackAnalysis: TrackAnalysis }): JSX.Element {
+function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Track how many rows we have, where the first row starts, depth-wise, and the spacing between each row  
   const FREQUENCY_ROWS: number = 10;
   const STARTING_DEPTH: number = -10;
@@ -19,6 +19,10 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   // On either end, we want a set number of points to ease down the minimum/maximum frequencies to 0
   // and avoid sharp cliffs
   const ANCHOR_POINTS = 8;
+
+  // Pull our store items
+  const trackAnalysis = useStore(state => state.analysis);
+  const frequencyTheme = useStore(state => state.theme.frequencyGrid);
 
   // Construct the set of points to use for each line
   const pointSet = useMemo(() => {
@@ -60,7 +64,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   // Construct multiple lines from the geometry
   const rowLines = useRef<THREE.Line[]>([]);
   const rowElements = useMemo(() => {
-    const lineMaterial = new THREE.LineBasicMaterial({color: 0xaa00aa});
+    const lineMaterial = new THREE.LineBasicMaterial({color: frequencyTheme.lineColor});
 
     return generateNumericArray(FREQUENCY_ROWS).map((rowIndex) => {
       const line = new THREE.Line(frequencyGeometry, lineMaterial);
@@ -76,7 +80,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
         key={rowIndex}
       />
     })
-    }, [frequencyGeometry, STARTING_DEPTH, DEPTH_SPACING, FREQUENCY_ROWS]);
+    }, [frequencyTheme, frequencyGeometry, STARTING_DEPTH, DEPTH_SPACING, FREQUENCY_ROWS]);
 
   useFrame((state, delta) => {
     if (props.analyser.current === null || props.audio.current === null) {
@@ -111,7 +115,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
 
     // Calculate how much of the measure, by percentage has elapsed by now
     let measurePercentage = 0;
-    const secondsPerMeasure = props.trackAnalysis.secondsPerMeasure;
+    const secondsPerMeasure = trackAnalysis.secondsPerMeasure;
 
     if (props.audio.current.currentTime > 0) {
       measurePercentage = (props.audio.current.currentTime % secondsPerMeasure) / secondsPerMeasure;

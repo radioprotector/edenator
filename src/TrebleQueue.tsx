@@ -3,11 +3,11 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 
+import { useStore } from './visualizerStore';
 import { generateNumericArray } from './Utils';
-import { TrackAnalysis } from './TrackAnalysis';
 import Peak from './Peak';
 
-function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeked: number, trackAnalysis: TrackAnalysis }): JSX.Element {
+function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
   let nextAvailableGroupIndex = 0;
   const availableTrebleGroupsRing = useRef<THREE.Group[]>([]);
@@ -19,12 +19,9 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
   const BASE_LIGHT_INTENSITY = 20;
   const BASE_LIGHT_DISTANCE = 20;
 
-  const textures = useTexture({
-    corona: 'textures/corona.png',
-    ring: 'textures/ring.png',
-    extendring: 'textures/extendring.png',
-    wavering: 'textures/wavering.png'
-  });
+  const trackAnalysis = useStore(state => state.analysis);
+  const trebleTheme = useStore(state => state.theme.treble);
+  const spriteTexture = useTexture(trebleTheme.spriteTexture);
 
   // Generate available sprites for use in a ring buffer
   const availableSpriteElements = 
@@ -39,8 +36,8 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
           scale={[15, 15, 1]}
         >
           <spriteMaterial
-            color={0xffaaff}
-            map={textures.extendring}
+            color={trebleTheme.spriteColor}
+            map={spriteTexture}
             depthWrite={false}
             transparent={true}
             blending={THREE.CustomBlending}
@@ -50,22 +47,23 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
           />
         </sprite>
         <pointLight
-          color={0xffffff}
+          color={trebleTheme.lightColor}
           castShadow={false}
           distance={BASE_LIGHT_DISTANCE}
         />
       </group>
     });
 
-  // Reset the peak indices when we seek
-  useEffect(
+  // Reset the peak indices when we seek or change tracks
+  useEffect(() => useStore.subscribe(
+    state => [state.analysis, state.audioLastSeeked],
     () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextUnrenderedPeakIndex = 0;
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextAvailableGroupIndex = 0;
-    },
-    [props.trackAnalysis, props.trackAnalysis.treble, props.audioLastSeeked]);
+    }),
+    []);
 
   useFrame((state, delta) => {
     if (props.audio.current === null || availableTrebleGroupsRing.current === null) {
@@ -76,8 +74,8 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
     const lastRenderTime = Math.max(audioTime - delta, 0);
 
     // Determine if we need to fill the ring buffer with any new meshes
-    for (let peakIdx = nextUnrenderedPeakIndex; peakIdx < props.trackAnalysis.treble.length; peakIdx++) {
-      const curPeak = props.trackAnalysis.treble[peakIdx];
+    for (let peakIdx = nextUnrenderedPeakIndex; peakIdx < trackAnalysis.treble.length; peakIdx++) {
+      const curPeak = trackAnalysis.treble[peakIdx];
       const peakDisplayStart = curPeak.time - LOOKAHEAD_PERIOD;
       const peakDisplayEnd = curPeak.end + DECAY_PERIOD;
 
@@ -97,8 +95,8 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement>, audioLastSeeke
       groupForPeak.userData['peak'] = curPeak;
 
       // Randomize the position of the group
-      const angle = props.trackAnalysis.getTrackSeededRandomInt(0, 359, curPeak.time) * THREE.MathUtils.DEG2RAD;
-      const radius = props.trackAnalysis.getTrackSeededRandomInt(12, 20, curPeak.time);
+      const angle = trackAnalysis.getTrackSeededRandomInt(0, 359, curPeak.time) * THREE.MathUtils.DEG2RAD;
+      const radius = trackAnalysis.getTrackSeededRandomInt(12, 20, curPeak.time);
       
       groupForPeak.position.x = Math.cos(angle) * radius;
       groupForPeak.position.y = Math.sin(angle) * radius;

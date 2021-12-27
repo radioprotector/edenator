@@ -8,8 +8,6 @@ export interface Theme {
   },
   beat: {
     color: THREE.Color;
-
-    sides: number;
   },
   treble: {
     spriteColor: THREE.Color;
@@ -32,14 +30,13 @@ export interface Theme {
   }
 }
 
-const defaultTheme: Theme = {
+export const defaultTheme: Theme = {
   bass: {
     wireframeColor: new THREE.Color(0x8f074b),
     panelColor: new THREE.Color(0x850707)
   },
   beat: {
-    color: new THREE.Color(0x770077),
-    sides: 6
+    color: new THREE.Color(0x770077)
   },
   treble: {
     spriteColor: new THREE.Color(0xffaaff),
