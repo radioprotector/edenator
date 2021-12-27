@@ -135,7 +135,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
       if (Number.isFinite(frequencies[47])) {
         // Make the star glows visible as appropriate
-        starFlashOpacityFactor = (frequencies[47] / 255.0) / 1.5;
+        starFlashOpacityFactor = (frequencies[47] / 255.0);
       }
     }
 
