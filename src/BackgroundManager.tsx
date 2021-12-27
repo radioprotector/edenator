@@ -33,11 +33,21 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
   // Load background textures
   const textures = useTexture({
     star_first: 'backgrounds/star-60.png',
+    star_first_flash: 'backgrounds/star-60-flash.png',
     star_second: 'backgrounds/star-80.png',
-    star_third: 'backgrounds/star-100.png'
+    star_second_flash: 'backgrounds/star-80-flash.png',
+    star_third: 'backgrounds/star-100.png',
+    star_third_flash: 'backgrounds/star-100-flash.png'
   });
 
-  [textures.star_first, textures.star_second, textures.star_third].forEach((tex) => {
+  [
+    textures.star_first, 
+    textures.star_first_flash,
+    textures.star_second,
+    textures.star_second_flash,
+    textures.star_third,
+    textures.star_third_flash
+  ].forEach((tex) => {
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.setScalar(4);
   });
@@ -67,6 +77,9 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
   const firstStarLayer = useRef<THREE.Mesh>(null!);
   const secondStarLayer = useRef<THREE.Mesh>(null!);
   const thirdStarLayer = useRef<THREE.Mesh>(null!);
+  const firstStarFlashLayer = useRef<THREE.Mesh>(null!);
+  const secondStarFlashLayer = useRef<THREE.Mesh>(null!);
+  const thirdStarFlashLayer = useRef<THREE.Mesh>(null!);
   const ringGroup = useRef<THREE.Group>(null!);
   const firstLineRing = useRef<THREE.LineSegments>(null!);
   const secondLineRing = useRef<THREE.LineSegments>(null!);
@@ -95,12 +108,16 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     thirdLineRing.current.rotation.set(0, 0, 0.5 * ringRotation);
 
     firstStarLayer.current.position.x = 50 * starRotation;
+    firstStarFlashLayer.current.position.x = 50 * starRotation;
     secondStarLayer.current.position.x = 100 * starRotation;
+    secondStarFlashLayer.current.position.x = 100 * starRotation;
     thirdStarLayer.current.position.x = 150 * starRotation;
+    thirdStarFlashLayer.current.position.x = 150 * starRotation;
 
     // If we're currently playing, tweak based on the music
     let ringOpacityFactor = 0.0;
     let ringScaleFactor = 0.0;
+    let starFlashOpacityFactor = 0.0;
 
     if (currentTrackTime > 0 && props.analyser.current !== null) {
       const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
@@ -115,14 +132,23 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         // Let this contribute to at most a 25% increase in scale
         ringScaleFactor = (frequencies[8] / 255.0) / 4;
       }
+
+      if (Number.isFinite(frequencies[4])) {
+        // Make the star glows visible as appropriate
+        starFlashOpacityFactor = (frequencies[4] / 255.0);
+      }
     }
 
-    (firstLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.5 + ringOpacityFactor;
-    (secondLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.4 + ringOpacityFactor;
-    (thirdLineRing.current.material as THREE.LineBasicMaterial).opacity = 0.3 + ringOpacityFactor;
+    (firstLineRing.current.material as THREE.Material).opacity = 0.5 + ringOpacityFactor;
+    (secondLineRing.current.material as THREE.Material).opacity = 0.4 + ringOpacityFactor;
+    (thirdLineRing.current.material as THREE.Material).opacity = 0.3 + ringOpacityFactor;
+
+    (firstStarFlashLayer.current.material as THREE.Material).opacity = starFlashOpacityFactor;
+    (secondStarFlashLayer.current.material as THREE.Material).opacity = starFlashOpacityFactor;
+    (thirdStarFlashLayer.current.material as THREE.Material).opacity = starFlashOpacityFactor;
 
     // If we are just coming off of an increase in scale, we want to ease back to the standard 1.0
-    const ringDampenedScale = firstLineRing.current.scale.x * 0.8;
+    const ringDampenedScale = firstLineRing.current.scale.x * 0.9;
     const newRingScale = Math.max(1.0 + ringScaleFactor, ringDampenedScale);
 
     firstLineRing.current.scale.x = firstLineRing.current.scale.y = newRingScale;
@@ -188,54 +214,109 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           />
         </lineSegments>
       </group>
+      <group>
       <mesh
-        ref={firstStarLayer}
-        position={[0, 0, -500]}
-        scale={[2, 2, 1]}
-      >
-        <planeGeometry
-          args={[2000, 2000]}
-        />
-        <meshBasicMaterial
-          color={0xff66ff}
-          map={textures.star_first}
-          transparent={true}
-          fog={false}
-          precision={'lowp'}
-        />
-      </mesh>
-      <mesh
-        ref={secondStarLayer}
-        position={[0, 0, -600]}
-        scale={[2, 2, 1]}
-      >
-        <planeGeometry
-          args={[2000, 2000]}
-        />
-        <meshBasicMaterial
-          color={0xffaaff}
-          map={textures.star_second}
-          transparent={true}
-          fog={false}
-          precision={'lowp'}
-        />
-      </mesh>
-      <mesh
-        ref={thirdStarLayer}
-        position={[0, 0, -700]}
-        scale={[2, 2, 1]}
-      >
-        <planeGeometry
-          args={[2000, 2000]}
-        />
-        <meshBasicMaterial
-          color={0xffccff}
-          map={textures.star_third}
-          transparent={true}
-          fog={false}
-          precision={'lowp'}
-        />
-      </mesh>
+          ref={firstStarFlashLayer}
+          position={[0, 0, -499]}
+          scale={[2, 2, 1]}
+        >
+          <planeGeometry
+            args={[2000, 2000]}
+          />
+          <meshBasicMaterial
+            color={0xff66ff}
+            map={textures.star_first_flash}
+            transparent={true}
+            opacity={0.0}
+            fog={false}
+            precision={'lowp'}
+          />
+        </mesh>
+        <mesh
+          ref={firstStarLayer}
+          position={[0, 0, -500]}
+          scale={[2, 2, 1]}
+        >
+          <planeGeometry
+            args={[2000, 2000]}
+          />
+          <meshBasicMaterial
+            color={0xff66ff}
+            map={textures.star_first}
+            transparent={true}
+            fog={false}
+            precision={'lowp'}
+          />
+        </mesh>
+
+        <mesh
+          ref={secondStarFlashLayer}
+          position={[0, 0, -599]}
+          scale={[2, 2, 1]}
+        >
+          <planeGeometry
+            args={[2000, 2000]}
+          />
+          <meshBasicMaterial
+            color={0xffaaff}
+            map={textures.star_second_flash}
+            transparent={true}
+            opacity={0.0}
+            fog={false}
+            precision={'lowp'}
+          />
+        </mesh>
+        <mesh
+          ref={secondStarLayer}
+          position={[0, 0, -600]}
+          scale={[2, 2, 1]}
+        >
+          <planeGeometry
+            args={[2000, 2000]}
+          />
+          <meshBasicMaterial
+            color={0xffaaff}
+            map={textures.star_second}
+            transparent={true}
+            fog={false}
+            precision={'lowp'}
+          />
+        </mesh>
+
+        <mesh
+          ref={thirdStarFlashLayer}
+          position={[0, 0, -699]}
+          scale={[2, 2, 1]}
+        >
+          <planeGeometry
+            args={[2000, 2000]}
+          />
+          <meshBasicMaterial
+            color={0xffccff}
+            map={textures.star_third_flash}
+            transparent={true}
+            opacity={0.0}
+            fog={false}
+            precision={'lowp'}
+          />
+        </mesh>
+        <mesh
+          ref={thirdStarLayer}
+          position={[0, 0, -700]}
+          scale={[2, 2, 1]}
+        >
+          <planeGeometry
+            args={[2000, 2000]}
+          />
+          <meshBasicMaterial
+            color={0xffccff}
+            map={textures.star_third}
+            transparent={false} // Make this last one non-transparent
+            fog={false}
+            precision={'lowp'}
+          />
+        </mesh>
+      </group>
     </group>
   );
 }
