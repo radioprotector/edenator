@@ -1,9 +1,128 @@
 import { Reader } from "jsmediatags";
 import { FrameType, TagType } from "jsmediatags/types";
 import Peak from "./Peak";
-import { TrackAnalysis } from "./TrackAnalysis";
+import { OpenKey, TrackAnalysis } from "./TrackAnalysis";
 
 const ANALYZER_SAMPLE_RATE = 44100;
+
+const RECOGNIZED_KEY_VALUES = Object.values(OpenKey);
+
+/**
+ * Converts various key formats into a corresponding Open Key Notation representation.
+ * @see {@link https://id3.org/id3v2.3.0|TKEY value definition} (TKEY)
+ * @see {@link https://mixedinkey.com/harmonic-mixing-guide/|Camelot mixing keys}
+ */
+const KEY_CONVERSION_CHART: { [key: string]: OpenKey } = {
+  // A-flat/G-sharp minor
+  '1A': OpenKey.G_Sharp_Minor,
+  'G#m': OpenKey.G_Sharp_Minor,
+  'Abm': OpenKey.G_Sharp_Minor,
+
+  // B major
+  '1B': OpenKey.B_Major,
+  'B': OpenKey.B_Major,
+
+  // E-flat/D-sharp minor
+  '2A': OpenKey.D_Sharp_Minor,
+  'D#m': OpenKey.D_Sharp_Minor,
+  'Ebm': OpenKey.D_Sharp_Minor,
+
+  // F-sharp/G-flat major
+  '2B': OpenKey.F_Sharp_Major,
+  'F#': OpenKey.F_Sharp_Major,
+  'Gb': OpenKey.F_Sharp_Major,
+
+  // B-flat/A-sharp minor
+  '3A': OpenKey.B_Flat_Minor,
+  'A#m': OpenKey.B_Flat_Minor,
+  'Bbm': OpenKey.B_Flat_Minor,
+
+  // D-flat/C-sharp major
+  '3B': OpenKey.D_Flat_Major,
+  'C#': OpenKey.D_Flat_Major,
+  'Db': OpenKey.D_Flat_Major,
+
+  // F minor
+  '4A': OpenKey.F_Minor,
+  'Fm': OpenKey.F_Minor,
+
+  // A-flat/G-sharp major
+  '4B': OpenKey.A_Flat_Major,
+  'G#': OpenKey.A_Flat_Major,
+  'Ab': OpenKey.A_Flat_Major,
+
+  // C minor
+  '5A': OpenKey.C_Minor,
+  'Cm': OpenKey.C_Minor,
+
+  // E-flat/D-sharp major
+  '5B': OpenKey.E_Flat_Major,
+  'D#': OpenKey.E_Flat_Major,
+  'Eb': OpenKey.E_Flat_Major,
+
+  // G minor
+  '6A': OpenKey.G_Minor,
+  'Gm': OpenKey.G_Minor,
+
+  // B-flat/A-sharp major
+  '6B': OpenKey.B_Flat_Major,
+  'A#': OpenKey.B_Flat_Major,
+  'Bb': OpenKey.B_Flat_Major,
+
+  // D minor
+  '7A': OpenKey.D_Minor,
+  'Dm': OpenKey.D_Minor,
+
+  // F major
+  '7B': OpenKey.F_Major,
+  'F': OpenKey.F_Major,
+
+  // A minor
+  '8A': OpenKey.A_Minor,
+  'Am': OpenKey.A_Minor,
+
+  // C major
+  '8B': OpenKey.C_Major,
+  'C': OpenKey.C_Major,
+
+  // E minor
+  '9A': OpenKey.E_Minor,
+  'Em': OpenKey.E_Minor,
+
+  // G major
+  '9B': OpenKey.G_Major,
+  'G': OpenKey.G_Major,
+
+  // B minor
+  '10A': OpenKey.B_Minor,
+  'Bm': OpenKey.B_Minor,
+
+  // D major
+  '10B': OpenKey.D_Major,
+  'D': OpenKey.D_Major,
+
+  // G-flat/F-sharp minor
+  '11A': OpenKey.F_Sharp_Minor,
+  'F#m': OpenKey.F_Sharp_Minor,
+  'Gbm': OpenKey.F_Sharp_Minor,
+
+  // A major
+  '11B': OpenKey.A_Major,
+  'A': OpenKey.A_Major,
+
+  // D-flat/C-sharp minor
+  '12A': OpenKey.C_Sharp_Minor,
+  'C#m': OpenKey.C_Sharp_Minor,
+  'Dbm': OpenKey.C_Sharp_Minor,
+
+  // E major
+  '12B': OpenKey.E_Major,
+  'E': OpenKey.E_Major,
+
+  // Map off-key items to '0' placeholder
+  'o': OpenKey.OffKey,
+  'O': OpenKey.OffKey
+};
 
 interface PeakAnalysisArgs {
   minFrequency: number | null;
@@ -114,6 +233,32 @@ function getBpmTagValue(tagCollection: TagType): number | null {
   }
 }
 
+function getKeyTagValue(tagCollection: TagType): OpenKey | null {
+  let keyTag = findTagValue(tagCollection, ['KEY', 'TKEY'], ['INITIAL KEY', 'INITIAL_KEY']);
+  let keyValue: string = '';
+
+  if (keyTag === null) {
+    return null;
+  }
+  else {
+    keyValue = keyTag.data.toString();
+  }
+
+  // Convert appropriate values to open key notation
+  if (keyValue in KEY_CONVERSION_CHART) {
+    keyValue = KEY_CONVERSION_CHART[keyValue];
+  }
+
+  // See if this matches a recognized key value
+  if (keyValue !== null && RECOGNIZED_KEY_VALUES.includes(keyValue.trim() as OpenKey)) {
+    return keyValue as OpenKey;
+  }
+  else {
+    console.debug(`unrecognized key value: ${keyValue}`);
+    return null;
+  }
+}
+
 function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
   // For processing, downmix to mono
   // HACK: We need to use one audio context just so we can decode the audio (and get the correct buffer length)
@@ -167,7 +312,7 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
       }
     }
 
-    console.debug('volume analyzed', renderedBuffer, smoothedVolume);
+    // console.debug('volume analyzed', renderedBuffer, smoothedVolume);
 
     return smoothedVolume;
   });
@@ -207,7 +352,7 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
       return audioContext.startRendering();
     })
     .then((renderedBuffer: AudioBuffer) => {
-      console.debug(`buffer for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency}`, renderedBuffer);
+      // console.debug(`buffer for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency}`, renderedBuffer);
       const frames = renderedBuffer.getChannelData(0);
       const peaksList: Peak[] = [];
       const peaksHistogram: { [roundedIntensity: string]: number } = {};
@@ -360,11 +505,13 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
     .then((values): TrackAnalysis => {
       const [tagResult, subBassResult, bassResult, beatResult, trebleResult] = values;
       const bpmFromTags = getBpmTagValue(tagResult);
+      const keyFromTags = getKeyTagValue(tagResult);
 
       const analysis = new TrackAnalysis()
       analysis.title = tagResult.tags.title ?? 'Unknown Title';
       analysis.artist = tagResult.tags.artist ?? 'Unknown Artist';
       analysis.bpm = bpmFromTags ?? 120;
+      analysis.key = keyFromTags;
       analysis.subBass = subBassResult;
       analysis.bass = bassResult;
       analysis.beat = beatResult;

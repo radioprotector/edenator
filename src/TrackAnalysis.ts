@@ -1,5 +1,53 @@
 import Peak from "./Peak";
 
+/**
+ * The different key values that are supported
+ * by Open Key Notation.
+ * @see {@link https://www.beatunes.com/en/open-key-notation.html}
+ */
+ export enum OpenKey {
+  C_Major = '1d',
+  A_Minor = '1m',
+
+  G_Major = '2d',
+  E_Minor = '2m',
+
+  D_Major = '3d',
+  B_Minor = '3m',
+
+  A_Major = '4d',
+  F_Sharp_Minor = '4m',
+
+  E_Major = '5d',
+  C_Sharp_Minor = '5m',
+
+  B_Major = '6m',
+  G_Sharp_Minor = '6d',
+
+  F_Sharp_Major = '7d',
+  D_Sharp_Minor = '7m',
+
+  D_Flat_Major = '8d',
+  B_Flat_Minor = '8m',
+
+  A_Flat_Major = '9d',
+  F_Minor = '9m',
+
+  E_Flat_Major = '10d',
+  C_Minor = '10m',
+
+  B_Flat_Major = '11d',
+  G_Minor = '11m',
+
+  F_Major = '12d',
+  D_Minor = '12m',
+
+  OffKey = '0'
+}
+
+/**
+ * An analysis of a track to be played and visualized.
+ */
 export class TrackAnalysis
 {
   public title: string = '';
@@ -13,6 +61,11 @@ export class TrackAnalysis
     // Use the inverse to get seconds per measure
     return 240 / this.bpm;
   }
+
+  /**
+   * The key that was detected for the track, or null if not detected.
+   */
+  public key: OpenKey | null = null;
 
   public subBass: Peak[] = [];
 
