@@ -6,6 +6,7 @@ import { useStore } from './visualizerStore';
 import { getNextTheme, getThemeForTrack } from './Themes';
 
 import './App.css';
+import AppStyles from './AppStyles';
 import Visualizer from './Visualizer';
 
 function App(): JSX.Element {
@@ -19,7 +20,8 @@ function App(): JSX.Element {
 
   // XXX: Investigate supprting webkitAudioContext
   const audioContext = useMemo(() => new AudioContext(), []);
-  const sourceFileElement = useRef<HTMLInputElement>(null);
+  const sourceFileElement = useRef<HTMLInputElement>(null!);
+  const dummyFileButtonElement = useRef<HTMLButtonElement>(null!);
 
   // These are indirect refs set up via audio player callback
   const audioPlayerElement = useRef<HTMLAudioElement | null>(null);
@@ -42,10 +44,16 @@ function App(): JSX.Element {
     [audioContext],
   );
 
+  const dummyFilePickerClicked = () => {
+    sourceFileElement.current.click();
+  };
+
   const selectedFileChange = () => {
     if (sourceFileElement.current?.files?.length === 1)
     {
       // Disable the file picker while we analyze the track
+      dummyFileButtonElement.current.disabled = true;
+      dummyFileButtonElement.current.innerText = "Analyzing...";
       sourceFileElement.current.disabled = true;
       sourceFileElement.current.readOnly = true;
 
@@ -84,6 +92,11 @@ function App(): JSX.Element {
             sourceFileElement.current.disabled = false;
             sourceFileElement.current.readOnly = false;
           }
+
+          if (dummyFileButtonElement.current) {
+            dummyFileButtonElement.current.disabled = false;
+            dummyFileButtonElement.current.innerText = "Choose a track";
+          }
         })
     }
   };
@@ -109,22 +122,31 @@ function App(): JSX.Element {
 
   return (
     <div>
-      <label htmlFor="sourceFile">
-        Choose an audio file
+      <AppStyles />
+      <div id="filePicker">
+        <button
+          type="button"
+          ref={dummyFileButtonElement}
+          id="dummyFilePicker"
+          onClick={dummyFilePickerClicked}
+        >
+          Choose a track
+        </button>
         <input
           type="file"
           ref={sourceFileElement}
           id="sourceFile"
+          aria-label="Select an audio file"
           accept="audio/*"
           onChange={selectedFileChange}
         />
-      </label>
+      </div>
       <button
         type="button"
         id="themeCycler"
         onClick={cycleTheme}
       >
-        Switch Theme
+        Switch theme
       </button>
       <audio
         ref={audioPlayerRef}

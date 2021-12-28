@@ -1,3 +1,10 @@
+html {
+  --ui-color-text: black;
+  --ui-color-background: white;
+  --ui-color-background-disabled: #bfbfbf;
+  --ui-color-border: black;
+}
+
 #canvas-container {
   position: fixed;
   top: 0;
@@ -9,11 +16,43 @@
   background-color: black;
 }
 
-#sourceFile {
+#filePicker {
   position: fixed;
   z-index: 10;
   top: 5vh;
-  left: 7vw;
+  left: 5vw;
+}
+
+#themeCycler {
+  position: fixed;
+  z-index: 10;
+  top: 5vh;
+  right: 5vw;
+}
+
+#dummyFilePicker, #themeCycler {
+  display: inline-block;
+  padding: 1vh 1vw;
+  color: var(--ui-color-text);
+  background-color: var(--ui-color-background);
+  border: 1px solid var(--ui-color-border);
+  border-radius: 1vh;
+  font-weight: bold;
+}
+
+#dummyFilePicker:disabled, #themeCycler:disabled {
+  background-color: var(--ui-color-background-disabled);
+}
+
+#sourceFile {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
 }
 
 #audioPlayer {
@@ -23,11 +62,4 @@
   left: 25vw;
   margin: 0 auto;
   width: 50vw;
-}
-
-#themeCycler {
-  position: fixed;
-  z-index: 10;
-  top: 5vh;
-  right: 7vw;
 }
