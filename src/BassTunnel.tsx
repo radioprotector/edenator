@@ -158,7 +158,7 @@ function getDepthForSegment(segmentIndex: number): number {
 }
 
 function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
-  const HORIZ_OFFSET = 10;
+  const HORIZ_OFFSET = 12;
   let nextBassIndex = 0;
   let nextSubBassIndex = 0;
   
