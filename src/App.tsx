@@ -57,6 +57,13 @@ function App(): JSX.Element {
       sourceFileElement.current.disabled = true;
       sourceFileElement.current.readOnly = true;
 
+      // Disable the audio player while we analyze - we don't want
+      // weird concurrency issues when we're updating the element
+      if (audioPlayerElement.current) {
+        audioPlayerElement.current.pause();
+        audioPlayerElement.current.controls = false;
+      }
+
       const trackFile = sourceFileElement.current.files[0];
 
       analyzeTrack(trackFile)
@@ -96,6 +103,10 @@ function App(): JSX.Element {
           if (dummyFileButtonElement.current) {
             dummyFileButtonElement.current.disabled = false;
             dummyFileButtonElement.current.innerText = "Choose a track";
+          }
+
+          if (audioPlayerElement.current && audioPlayerElement.current.src) {
+            audioPlayerElement.current.controls = true;
           }
         })
     }
@@ -152,7 +163,7 @@ function App(): JSX.Element {
         ref={audioPlayerRef}
         id="audioPlayer"
         onSeeked={setStoreAudioSeeked}
-        controls>
+      >
       </audio>
       <div id="canvas-container">
         <Suspense fallback={null}>
