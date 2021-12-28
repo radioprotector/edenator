@@ -85,13 +85,67 @@ export interface Theme {
      * The color to use for "flashed" stars in the background.
      */
     starFlashColor: THREE.Color;
+  },
+
+  /**
+   * Contains theming information for the overall application UI.
+   */
+  ui: {
+    textColor: THREE.Color;
+
+    backgroundColor: THREE.Color;
+
+    disabledBackgroundColor: THREE.Color;
+
+    borderColor: THREE.Color;
   }
 }
 
 const BLACK_COLOR = new THREE.Color(0x000000);
 const WHITE_COLOR = new THREE.Color(0xFFFFFF);
 
+/**
+ * Gets the sRGB value to use in luma calculations for the specified color component.
+ * @param floatColor The color component, on a 0.0-1.0 scale.
+ * @returns The corresponding luma component.
+ * @see {@link https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef}
+ */
+function getLumaComponent(floatColor: number): number {
+  const cutoff = 0.03928;
+
+  if (floatColor <= cutoff) {
+    return floatColor / 12.92;
+  }
+  else {
+    return Math.pow(((floatColor + 0.055) / 1.055), 2.4);
+  }
+}
+
+/**
+ * Gets the luma value for the specified color.
+ * @param color The color .
+ * @returns The corresponding luma value.
+ * @see {@link https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef}
+ */
+function getLuma(color: THREE.Color): number {
+  return (0.2126 * getLumaComponent(color.r)) + (0.7152 * getLumaComponent(color.g)) + (0.0722 * getLumaComponent(color.b));
+}
+
 function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryColor: THREE.Color): Theme {
+  // Determine the UI text color to use
+  const LIGHT_LUMA_THRESHOLD = 0.43;
+  let uiTextColor: THREE.Color;
+  let uiDisabledBgColor: THREE.Color;
+
+  if (getLuma(baseColor) < LIGHT_LUMA_THRESHOLD) {
+    uiTextColor = WHITE_COLOR;
+    uiDisabledBgColor = new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.2);
+  }
+  else {
+    uiTextColor = BLACK_COLOR;
+    uiDisabledBgColor = new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.2);
+  }
+
   return {
     name: name,
     bass: {
@@ -102,18 +156,24 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
       color: new THREE.Color(baseColor)
     },
     treble: {
-      spriteColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.75),
+      spriteColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.65),
       spriteTexture: 'textures/extendring.png',
-      lightColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.9),
+      lightColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.75),
     },
     frequencyGrid: {
       lineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75)
     },
     background: {
-      sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.8),
+      sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.7),
       burstLineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.5),
-      starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.9),
+      starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.8),
       starFlashColor: WHITE_COLOR
+    },
+    ui: {
+      textColor: uiTextColor,
+      backgroundColor: new THREE.Color(baseColor),
+      disabledBackgroundColor: uiDisabledBgColor,
+      borderColor: new THREE.Color(secondaryColor)
     }
   };
 }
@@ -140,57 +200,14 @@ export const defaultTheme: Theme = {
     burstLineColor: new THREE.Color(0xffffaa),
     starColor: new THREE.Color(0xaa66aa),
     starFlashColor: new THREE.Color(0xffffff)
+  },
+  ui: {
+    textColor: new THREE.Color(BLACK_COLOR),
+    backgroundColor: new THREE.Color(WHITE_COLOR),
+    disabledBackgroundColor: new THREE.Color(WHITE_COLOR).lerp(BLACK_COLOR, 0.25),
+    borderColor: new THREE.Color(BLACK_COLOR)
   }
 };
-
-// const magentaTheme: Theme = {
-//   name: 'magenta',
-//   bass: {
-//     wireframeColor: new THREE.Color(0xFF00E4),
-//     panelColor: new THREE.Color(0xED50F1)
-//   },
-//   beat: {
-//     color: new THREE.Color(0xFDB9FC)
-//   },
-//   treble: {
-//     spriteColor: new THREE.Color(0xffdcdc),
-//     spriteTexture: 'textures/extendring.png',
-//     lightColor: new THREE.Color(0xffeeee)
-//   },
-//   frequencyGrid: {
-//     lineColor: new THREE.Color(0xaa00aa)
-//   },
-//   background: {
-//     sunColor: new THREE.Color(0xffcc55),
-//     burstLineColor: new THREE.Color(0xffdcdc),
-//     starColor: new THREE.Color(0xaa00aa),
-//     starFlashColor: new THREE.Color(0xffffff)
-//   }
-// };
-// const darkBlueTheme: Theme = {
-//   name: 'dark blue',
-//   bass: {
-//     wireframeColor: new THREE.Color(0x2E81D9),
-//     panelColor: new THREE.Color(0x3FC5F0)
-//   },
-//   beat: {
-//     color: new THREE.Color(0x2ED9D6)
-//   },
-//   treble: {
-//     spriteColor: new THREE.Color(0xdcdcff),
-//     spriteTexture: 'textures/extendring.png',
-//     lightColor: new THREE.Color(0xeeeeff)
-//   },
-//   frequencyGrid: {
-//     lineColor: new THREE.Color(0x34F8BE)
-//   },
-//   background: {
-//     sunColor: new THREE.Color(0x55ccff),
-//     burstLineColor: new THREE.Color(0xdcdcff),
-//     starColor: new THREE.Color(0x55ccff),
-//     starFlashColor: new THREE.Color(0xffffff)
-//   }
-// };
 
 const magentaTheme = generateThemeForColor('magenta', new THREE.Color('Orchid'), new THREE.Color('DarkOrchid'));
 const indigoTheme = generateThemeForColor('indigo', new THREE.Color('BlueViolet'), new THREE.Color('DarkViolet'));
