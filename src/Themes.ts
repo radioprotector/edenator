@@ -5,6 +5,8 @@ import { OpenKey, TrackAnalysis } from './TrackAnalysis';
  * A theme to use for the visualizer.
  */
 export interface Theme {
+  name: string;
+
   /**
    * Contains theming information relevant to the BassTunnel component.
    */
@@ -86,7 +88,38 @@ export interface Theme {
   }
 }
 
+const BLACK_COLOR = new THREE.Color(0x000000);
+const WHITE_COLOR = new THREE.Color(0xFFFFFF);
+
+function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryColor: THREE.Color): Theme {
+  return {
+    name: name,
+    bass: {
+      wireframeColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(BLACK_COLOR, 0.3),
+      panelColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(BLACK_COLOR, 0.2)
+    },
+    beat: {
+      color: new THREE.Color(baseColor)
+    },
+    treble: {
+      spriteColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.75),
+      spriteTexture: 'textures/extendring.png',
+      lightColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.9),
+    },
+    frequencyGrid: {
+      lineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75)
+    },
+    background: {
+      sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.8),
+      burstLineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.5),
+      starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.9),
+      starFlashColor: WHITE_COLOR
+    }
+  };
+}
+
 export const defaultTheme: Theme = {
+  name: 'default',
   bass: {
     wireframeColor: new THREE.Color(0x8f074b),
     panelColor: new THREE.Color(0x850707)
@@ -110,61 +143,85 @@ export const defaultTheme: Theme = {
   }
 };
 
-const pinkTheme: Theme = {
-  bass: {
-    wireframeColor: new THREE.Color(0xFF00E4),
-    panelColor: new THREE.Color(0xED50F1)
-  },
-  beat: {
-    color: new THREE.Color(0xFDB9FC)
-  },
-  treble: {
-    spriteColor: new THREE.Color(0xffdcdc),
-    spriteTexture: 'textures/extendring.png',
-    lightColor: new THREE.Color(0xffeeee)
-  },
-  frequencyGrid: {
-    lineColor: new THREE.Color(0xaa00aa)
-  },
-  background: {
-    sunColor: new THREE.Color(0xffcc55),
-    burstLineColor: new THREE.Color(0xffdcdc),
-    starColor: new THREE.Color(0xaa00aa),
-    starFlashColor: new THREE.Color(0xffffff)
-  }
-};
+// const magentaTheme: Theme = {
+//   name: 'magenta',
+//   bass: {
+//     wireframeColor: new THREE.Color(0xFF00E4),
+//     panelColor: new THREE.Color(0xED50F1)
+//   },
+//   beat: {
+//     color: new THREE.Color(0xFDB9FC)
+//   },
+//   treble: {
+//     spriteColor: new THREE.Color(0xffdcdc),
+//     spriteTexture: 'textures/extendring.png',
+//     lightColor: new THREE.Color(0xffeeee)
+//   },
+//   frequencyGrid: {
+//     lineColor: new THREE.Color(0xaa00aa)
+//   },
+//   background: {
+//     sunColor: new THREE.Color(0xffcc55),
+//     burstLineColor: new THREE.Color(0xffdcdc),
+//     starColor: new THREE.Color(0xaa00aa),
+//     starFlashColor: new THREE.Color(0xffffff)
+//   }
+// };
+// const darkBlueTheme: Theme = {
+//   name: 'dark blue',
+//   bass: {
+//     wireframeColor: new THREE.Color(0x2E81D9),
+//     panelColor: new THREE.Color(0x3FC5F0)
+//   },
+//   beat: {
+//     color: new THREE.Color(0x2ED9D6)
+//   },
+//   treble: {
+//     spriteColor: new THREE.Color(0xdcdcff),
+//     spriteTexture: 'textures/extendring.png',
+//     lightColor: new THREE.Color(0xeeeeff)
+//   },
+//   frequencyGrid: {
+//     lineColor: new THREE.Color(0x34F8BE)
+//   },
+//   background: {
+//     sunColor: new THREE.Color(0x55ccff),
+//     burstLineColor: new THREE.Color(0xdcdcff),
+//     starColor: new THREE.Color(0x55ccff),
+//     starFlashColor: new THREE.Color(0xffffff)
+//   }
+// };
 
-const blueTheme: Theme = {
-  bass: {
-    wireframeColor: new THREE.Color(0x2E81D9),
-    panelColor: new THREE.Color(0x3FC5F0)
-  },
-  beat: {
-    color: new THREE.Color(0x2ED9D6)
-  },
-  treble: {
-    spriteColor: new THREE.Color(0xdcdcff),
-    spriteTexture: 'textures/extendring.png',
-    lightColor: new THREE.Color(0xeeeeff)
-  },
-  frequencyGrid: {
-    lineColor: new THREE.Color(0x34F8BE)
-  },
-  background: {
-    sunColor: new THREE.Color(0x55ccff),
-    burstLineColor: new THREE.Color(0xdcdcff),
-    starColor: new THREE.Color(0x55ccff),
-    starFlashColor: new THREE.Color(0xffffff)
-  }
-};
+const magentaTheme = generateThemeForColor('magenta', new THREE.Color('Orchid'), new THREE.Color('DarkOrchid'));
+const indigoTheme = generateThemeForColor('indigo', new THREE.Color('BlueViolet'), new THREE.Color('DarkViolet'));
+const lightBlueTheme = generateThemeForColor('light blue', new THREE.Color('LightBlue'), new THREE.Color('CornflowerBlue'));
+const midBlueTheme = generateThemeForColor('mid blue', new THREE.Color('DeepSkyBlue'), new THREE.Color('LightSkyBlue'));
+const darkBlueTheme = generateThemeForColor('deep blue', new THREE.Color('DodgerBlue'), new THREE.Color('SteelBlue'));
+const blueGreenTheme = generateThemeForColor('blue-green', new THREE.Color('Teal'), new THREE.Color('MediumTurquoise'));
+const greenTheme = generateThemeForColor('green', new THREE.Color('LimeGreen'), new THREE.Color('MediumSeaGreen'));
+const yellowGreenTheme = generateThemeForColor('yellow-green', new THREE.Color('GreenYellow'), new THREE.Color('YellowGreen'));
+const yellowTheme = generateThemeForColor('yellow', new THREE.Color('Gold'), new THREE.Color('Yellow'));
+const orangeTheme = generateThemeForColor('orange', new THREE.Color('OrangeRed'), new THREE.Color('Tomato'));
+const redTheme = generateThemeForColor('red', new THREE.Color('Red'), new THREE.Color('Coral'));
+const pinkTheme = generateThemeForColor('pink', new THREE.Color('HotPink'), new THREE.Color('PaleVioletRed'));
 
 /**
  * An array of all themes that can be assigned randomly by getThemeForTrack.
  */
 const ALL_THEMES = [
   defaultTheme,
-  pinkTheme,
-  blueTheme
+  magentaTheme,
+  indigoTheme,
+  lightBlueTheme,
+  midBlueTheme,
+  darkBlueTheme,
+  blueGreenTheme,
+  greenTheme,
+  yellowGreenTheme,
+  yellowTheme,
+  orangeTheme,
+  redTheme,
+  pinkTheme
 ];
 
 export function getThemeForTrack(track: TrackAnalysis): Theme {
@@ -182,13 +239,64 @@ export function getThemeForTrack(track: TrackAnalysis): Theme {
   switch(track.key) {
     case OpenKey.C_Major:
     case OpenKey.A_Minor:
-      return pinkTheme;
+      return magentaTheme;
+
+    case OpenKey.G_Major:
+    case OpenKey.E_Minor:
+      return indigoTheme;
 
     case OpenKey.D_Major:
     case OpenKey.B_Minor:
-      return blueTheme;
+      return darkBlueTheme;
+
+    case OpenKey.A_Major:
+    case OpenKey.F_Sharp_Minor:
+      return midBlueTheme;
+
+    case OpenKey.E_Major:
+    case OpenKey.C_Sharp_Minor:
+      return lightBlueTheme;
+
+    case OpenKey.B_Major:
+    case OpenKey.G_Sharp_Minor:
+      return blueGreenTheme;
+
+    case OpenKey.F_Sharp_Major:
+    case OpenKey.D_Sharp_Minor:
+      return greenTheme;
+
+    case OpenKey.D_Flat_Major:
+    case OpenKey.B_Flat_Minor:
+      return yellowGreenTheme;
+
+    case OpenKey.A_Flat_Major:
+    case OpenKey.F_Minor:
+      return yellowTheme;
+
+    case OpenKey.E_Flat_Major:
+    case OpenKey.C_Minor:
+      return orangeTheme;
+
+    case OpenKey.B_Flat_Major:
+    case OpenKey.G_Minor:
+      return redTheme;
+
+    case OpenKey.F_Major:
+    case OpenKey.D_Minor:
+      return pinkTheme;
 
     default:
       return defaultTheme;
   }
+}
+
+export function getNextTheme(currentTheme: Theme): Theme {
+  const currentThemeIndex = ALL_THEMES.indexOf(currentTheme);
+
+  // Return the first theme if we didn't find a match or we need to wrap around
+  if (currentThemeIndex === -1 || currentThemeIndex === ALL_THEMES.length - 1) {
+    return ALL_THEMES[0];
+  }
+
+  return ALL_THEMES[currentThemeIndex + 1];
 }

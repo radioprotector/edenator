@@ -3,7 +3,7 @@ import { Stats } from '@react-three/drei';
 
 import { analyzeTrack } from './Analyzer';
 import { useStore } from './visualizerStore';
-import { getThemeForTrack } from './Themes';
+import { getNextTheme, getThemeForTrack } from './Themes';
 
 import './App.css';
 import Visualizer from './Visualizer';
@@ -88,6 +88,12 @@ function App(): JSX.Element {
     }
   };
 
+  const cycleTheme = () => {
+    const nextTheme = getNextTheme(useStore.getState().theme);
+    console.debug(`switching to ${nextTheme.name} theme`);
+    setStoreTheme(nextTheme);
+  };
+
   // Update the page title based on the currently playing song
   useEffect(() => useStore.subscribe(
     (state) => state.analysis, 
@@ -113,6 +119,13 @@ function App(): JSX.Element {
           onChange={selectedFileChange}
         />
       </label>
+      <button
+        type="button"
+        id="themeCycler"
+        onClick={cycleTheme}
+      >
+        Switch Theme
+      </button>
       <audio
         ref={audioPlayerRef}
         id="audioPlayer"
