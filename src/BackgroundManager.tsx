@@ -88,7 +88,9 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
   const secondLineRing = useRef<THREE.LineSegments>(null!);
   const thirdLineRing = useRef<THREE.LineSegments>(null!);
   
-  useFrame(() => {
+  useFrame((state) => {
+    state.scene.background = backgroundTheme.fillColor;
+
     // Hide the ring group when we don't have a track analysis
     ringGroup.current.visible = !trackAnalysis.isEmpty;
 

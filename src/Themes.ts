@@ -67,6 +67,11 @@ export interface Theme {
    */
   background: {
     /**
+     * The color to use for filling the background scene.
+     */
+    fillColor: THREE.Color;
+
+    /**
      * The color to use for the sun.
      */
     sunColor: THREE.Color;
@@ -164,6 +169,7 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
       lineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75)
     },
     background: {
+      fillColor: new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.97),
       sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.7),
       burstLineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.5),
       starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.8),
@@ -196,6 +202,7 @@ export const defaultTheme: Theme = {
     lineColor: new THREE.Color(0xaa00aa)
   },
   background: {
+    fillColor: new THREE.Color(BLACK_COLOR),
     sunColor: new THREE.Color(0xffcc55),
     burstLineColor: new THREE.Color(0xffffaa),
     starColor: new THREE.Color(0xaa66aa),
