@@ -3,6 +3,7 @@ import { Stats } from '@react-three/drei';
 
 import { analyzeTrack } from './Analyzer';
 import { useStore } from './visualizerStore';
+import { getThemeForTrack } from './Themes';
 
 import './App.css';
 import Visualizer from './Visualizer';
@@ -13,6 +14,7 @@ function App(): JSX.Element {
 
   // Wire up store hooks
   const setStoreAnalysis = useStore(store => store.setAnalysis);
+  const setStoreTheme = useStore(store => store.setTheme);
   const setStoreAudioSeeked = useStore(store => store.indicateAudioSeeked);
 
   // XXX: Investigate supprting webkitAudioContext
@@ -70,6 +72,7 @@ function App(): JSX.Element {
 
           playingFileUrl = newAudioUrl;
           setStoreAnalysis(analyzerResult);
+          setStoreTheme(getThemeForTrack(analyzerResult));
           setStoreAudioSeeked();
         })
         .catch((reason: any) => {

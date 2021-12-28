@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OpenKey, TrackAnalysis } from './TrackAnalysis';
 
 /**
  * A theme to use for the visualizer.
@@ -109,7 +110,7 @@ export const defaultTheme: Theme = {
   }
 };
 
-export const pinkTheme: Theme = {
+const pinkTheme: Theme = {
   bass: {
     wireframeColor: new THREE.Color(0xFF00E4),
     panelColor: new THREE.Color(0xED50F1)
@@ -132,3 +133,62 @@ export const pinkTheme: Theme = {
     starFlashColor: new THREE.Color(0xffffff)
   }
 };
+
+const blueTheme: Theme = {
+  bass: {
+    wireframeColor: new THREE.Color(0x2E81D9),
+    panelColor: new THREE.Color(0x3FC5F0)
+  },
+  beat: {
+    color: new THREE.Color(0x2ED9D6)
+  },
+  treble: {
+    spriteColor: new THREE.Color(0xdcdcff),
+    spriteTexture: 'textures/extendring.png',
+    lightColor: new THREE.Color(0xeeeeff)
+  },
+  frequencyGrid: {
+    lineColor: new THREE.Color(0x34F8BE)
+  },
+  background: {
+    sunColor: new THREE.Color(0x55ccff),
+    burstLineColor: new THREE.Color(0xdcdcff),
+    starColor: new THREE.Color(0x55ccff),
+    starFlashColor: new THREE.Color(0xffffff)
+  }
+};
+
+/**
+ * An array of all themes that can be assigned randomly by getThemeForTrack.
+ */
+const ALL_THEMES = [
+  defaultTheme,
+  pinkTheme,
+  blueTheme
+];
+
+export function getThemeForTrack(track: TrackAnalysis): Theme {
+  if (track === null) {
+    return defaultTheme;
+  }
+
+  // Randomly assign a key if we didn't detect one 
+  if (track.key === null) {
+    const keyIndex = track.getTrackRandomInt(0, ALL_THEMES.length - 1);
+    return ALL_THEMES[keyIndex];
+  }
+
+  // Map keys to specific themes
+  switch(track.key) {
+    case OpenKey.C_Major:
+    case OpenKey.A_Minor:
+      return pinkTheme;
+
+    case OpenKey.D_Major:
+    case OpenKey.B_Minor:
+      return blueTheme;
+
+    default:
+      return defaultTheme;
+  }
+}
