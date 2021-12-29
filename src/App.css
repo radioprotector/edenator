@@ -63,3 +63,29 @@ html {
   margin: 0 auto;
   width: 50vw;
 }
+
+.app-title {
+  position: fixed;
+  z-index: 20;
+  width: 100%;
+  margin: 20vh auto;
+  text-align: center;
+  color: var(--ui-color-contrast);
+}
+
+.app-error {
+  position: fixed;
+  z-index: 20;
+  bottom: 1vw;
+  left: 1vw;
+  width: 24vw;
+  text-align: left;
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-line;
+  color: var(--ui-color-contrast);
+  background-color: var(--ui-color-text);
+}
+
+.app-error a {
+  color: var(--ui-color-contrast);
+}

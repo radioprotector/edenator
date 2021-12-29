@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useMemo, useEffect, Suspense } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect, Suspense, useState } from 'react';
 import { Stats } from '@react-three/drei';
 
 import { analyzeTrack } from './Analyzer';
@@ -20,8 +20,10 @@ function App(): JSX.Element {
 
   // XXX: Investigate supprting webkitAudioContext
   const audioContext = useMemo(() => new AudioContext(), []);
+  const introElement = useRef<HTMLDivElement>(null!);
   const sourceFileElement = useRef<HTMLInputElement>(null!);
   const dummyFileButtonElement = useRef<HTMLButtonElement>(null!);
+  const [fileError, setFileError] = useState('');
 
   // These are indirect refs set up via audio player callback
   const audioPlayerElement = useRef<HTMLAudioElement | null>(null);
@@ -57,6 +59,9 @@ function App(): JSX.Element {
       sourceFileElement.current.disabled = true;
       sourceFileElement.current.readOnly = true;
 
+      // Reset the file error message
+      setFileError('');
+
       // Disable the audio player while we analyze - we don't want
       // weird concurrency issues when we're updating the element
       if (audioPlayerElement.current) {
@@ -86,12 +91,14 @@ function App(): JSX.Element {
           }
 
           playingFileUrl = newAudioUrl;
+          introElement.current.hidden = true;
           setStoreAnalysis(analyzerResult);
           setStoreTheme(getThemeForTrack(analyzerResult));
           setStoreAudioSeeked();
         })
         .catch((reason: any) => {
-          console.error(reason);
+          console.error(reason); 
+          setFileError(`Error opening "${trackFile?.name}":\n${reason.toString()}`);
         })
         .finally(() => {
           // Re-enable the file picker
@@ -122,7 +129,7 @@ function App(): JSX.Element {
   useEffect(() => useStore.subscribe(
     (state) => state.analysis, 
     (newAnalysis) => {
-      if (newAnalysis !== null && newAnalysis.artist !== '' && newAnalysis.title !== '') {
+      if (newAnalysis !== null && !newAnalysis.isEmpty && newAnalysis.artist !== '' && newAnalysis.title !== '') {
         document.title = `Edenator (${newAnalysis.artist} - ${newAnalysis.title})`;
       }
       else {
@@ -134,6 +141,36 @@ function App(): JSX.Element {
   return (
     <div>
       <AppStyles />
+      <div
+        ref={introElement}
+        className='app-title'
+      > 
+        <h1>
+          Edenator
+        </h1>
+        <p>
+          Start by choosing a song.
+        </p>
+        <p>
+          <strong><em>The visuals used by this application may not be suitable for
+          people with photosensitive epilepsy.</em></strong>
+        </p>
+      </div>
+      <div
+        className="app-error"
+        hidden={!fileError}
+      >
+        {fileError}
+        <div>
+          <a
+            href="javascript:;"
+            rel="button"
+            onClick={() => setFileError('')}
+          >
+            <strong>Dismiss</strong>
+          </a>
+        </div>
+      </div>
       <div id="filePicker">
         <button
           type="button"
@@ -147,7 +184,7 @@ function App(): JSX.Element {
           type="file"
           ref={sourceFileElement}
           id="sourceFile"
-          aria-label="Select an audio file"
+          aria-label="Choose an audio file"
           accept="audio/*"
           onChange={selectedFileChange}
         />
