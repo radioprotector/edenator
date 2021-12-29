@@ -172,8 +172,8 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
       fillColor: new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.97),
       sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.7),
       burstLineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.5),
-      starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.8),
-      starFlashColor: WHITE_COLOR
+      starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.25),
+      starFlashColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.6)
     },
     ui: {
       textColor: uiTextColor,
@@ -206,7 +206,7 @@ export const defaultTheme: Theme = {
     sunColor: new THREE.Color(0xffcc55),
     burstLineColor: new THREE.Color(0xffffaa),
     starColor: new THREE.Color(0xaa66aa),
-    starFlashColor: new THREE.Color(0xffffff)
+    starFlashColor: new THREE.Color(0xccaacc)
   },
   ui: {
     textColor: new THREE.Color(BLACK_COLOR),

@@ -52,6 +52,9 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     tex.repeat.setScalar(4);
   });
 
+  const horizonTexture = useTexture('backgrounds/horizon.png');
+  horizonTexture.wrapS = horizonTexture.wrapT = THREE.RepeatWrapping;
+
   const trackAnalysis = useStore(state => state.analysis);
   const backgroundTheme = useStore(state => state.theme.background); 
 
@@ -77,6 +80,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     return trackAnalysis.secondsPerMeasure * 16;
   }, [trackAnalysis]);
 
+  const horizonLayer = useRef<THREE.Mesh>(null!);
   const firstStarLayer = useRef<THREE.Mesh>(null!);
   const secondStarLayer = useRef<THREE.Mesh>(null!);
   const thirdStarLayer = useRef<THREE.Mesh>(null!);
@@ -122,6 +126,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     // If we're currently playing, tweak based on the music
     let ringOpacityFactor = 0.0;
     let ringScaleFactor = 0.0;
+    let horizonOpacityFactor = 0.0;
     let starFlashOpacityFactor = 0.0;
 
     if (currentTrackTime > 0 && props.analyser.current !== null) {
@@ -138,8 +143,11 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         ringScaleFactor = (frequencies[7] / 255.0) / 4;
       }
 
+      if (Number.isFinite(frequencies[32])) {
+        horizonOpacityFactor = (frequencies[32] / 255.0) / 3;
+      }
+
       if (Number.isFinite(frequencies[47])) {
-        // Make the star glows visible as appropriate
         starFlashOpacityFactor = (frequencies[47] / 255.0);
       }
     }
@@ -151,6 +159,15 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     (firstStarFlashLayer.current.material as THREE.Material).opacity = starFlashOpacityFactor;
     (secondStarFlashLayer.current.material as THREE.Material).opacity = starFlashOpacityFactor;
     (thirdStarFlashLayer.current.material as THREE.Material).opacity = starFlashOpacityFactor;
+
+    // Ease horizon flashes back down to 0.0, but cut off items that are approaching 0 opacity
+    let horizonDampenedOpacity = (horizonLayer.current.material as THREE.Material).opacity * 0.9;
+
+    if (horizonDampenedOpacity <= 0.01) {
+      horizonDampenedOpacity = 0;
+    }
+
+    (horizonLayer.current.material as THREE.Material).opacity = Math.max(horizonOpacityFactor, horizonDampenedOpacity);
 
     // If we are just coming off of an increase in scale, we want to ease back to the standard 1.0
     const ringDampenedScale = firstLineRing.current.scale.x * 0.9;
@@ -169,6 +186,25 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
   return (
     <group>
+      <mesh
+        ref={horizonLayer}
+        frustumCulled={false}
+        position={[0, 0, -300]}
+        scale={[8, 0.25, 1]}
+      >
+        <planeGeometry
+          args={[1024, 256]}
+        />
+        <meshBasicMaterial
+          color={backgroundTheme.starFlashColor}
+          map={horizonTexture}
+          transparent={true}
+          opacity={0.0}
+          fog={false}
+          depthWrite={false}
+          precision={'mediump'}
+        />
+       </mesh>
       <group ref={ringGroup}>
         <lineSegments
           ref={firstLineRing}
