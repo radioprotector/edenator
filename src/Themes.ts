@@ -170,10 +170,10 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
     },
     background: {
       fillColor: new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.97),
-      sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.7),
-      burstLineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.5),
-      starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.25),
-      starFlashColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(WHITE_COLOR, 0.6)
+      sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.7),
+      burstLineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.25),
+      starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.5),
+      starFlashColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75)
     },
     ui: {
       textColor: uiTextColor,
