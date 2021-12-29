@@ -10,8 +10,8 @@ function AppStyles(): JSX.Element {
       {css`
         html {
           --ui-color-text: ${uiTheme.textColor.getStyle()};
-          --ui-color-background: ${uiTheme.backgroundColor.getStyle()};
-          --ui-color-background-disabled: ${uiTheme.disabledBackgroundColor.getStyle()};
+          --ui-color-contrast: ${uiTheme.backgroundColor.getStyle()};
+          --ui-color-contrast-disabled: ${uiTheme.disabledBackgroundColor.getStyle()};
           --ui-color-border: ${uiTheme.borderColor.getStyle()};
       }`}
     </style>
