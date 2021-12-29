@@ -86,6 +86,16 @@ html {
   background-color: var(--ui-color-text);
 }
 
-.app-error a {
+.app-error button {
+  display: block;
+  margin: 1vh 0;
+  padding: 0;
+  border: none;
+  cursor: pointer;
   color: var(--ui-color-contrast);
+  background-color: transparent;
+  font-family: inherit;
+  font-weight: bold;
+  font-size: inherit;
+  text-decoration: underline;
 }

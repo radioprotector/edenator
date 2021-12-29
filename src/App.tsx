@@ -161,15 +161,12 @@ function App(): JSX.Element {
         hidden={!fileError}
       >
         {fileError}
-        <div>
-          <a
-            href="javascript:;"
-            rel="button"
-            onClick={() => setFileError('')}
-          >
-            <strong>Dismiss</strong>
-          </a>
-        </div>
+        <button
+          type="button"
+          onClick={() => setFileError('')}
+        >
+          Dismiss
+        </button>
       </div>
       <div id="filePicker">
         <button
