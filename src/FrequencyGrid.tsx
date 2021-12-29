@@ -127,6 +127,9 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
       const lineRow = rowLines.current[rowIndex];
       const baseDepth = STARTING_DEPTH + (DEPTH_SPACING * rowIndex);
 
+      // Hide all line rows when we don't have a track analysis
+      lineRow.visible = !trackAnalysis.isEmpty;
+
       lineRow.geometry.setFromPoints(pointSet);
       lineRow.geometry.computeBoundingBox();
 

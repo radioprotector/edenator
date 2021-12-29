@@ -323,6 +323,9 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
       const segment = tunnelSegments.current[segmentIndex];
       let segmentDepth = getDepthForSegment(segmentIndex) + timeDepthOffset;
 
+      // Hide all segments when we don't have a track analysis
+      segment.visible = !trackAnalysis.isEmpty;
+
       // Wrap the group if it's past the camera
       if (segmentDepth > WRAP_DEPTH) {
         segmentDepth -= TOTAL_DEPTH;
