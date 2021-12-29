@@ -133,7 +133,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     (thirdLineRing.current.material as THREE.Material).opacity = 0.3 + ringOpacityFactor;
 
     // Ease horizon flashes back down to 0.0, but cut off items that are approaching 0 opacity
-    let horizonDampenedOpacity = (horizonLayer.current.material as THREE.Material).opacity * 0.9;
+    let horizonDampenedOpacity = (horizonLayer.current.material as THREE.Material).opacity * 0.95;
 
     if (horizonDampenedOpacity <= 0.01) {
       horizonDampenedOpacity = 0;
