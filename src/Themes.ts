@@ -102,6 +102,8 @@ export interface Theme {
 
     disabledBackgroundColor: THREE.Color;
 
+    focusBackgroundColor: THREE.Color;
+
     borderColor: THREE.Color;
   }
 }
@@ -141,14 +143,17 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
   const LIGHT_LUMA_THRESHOLD = 0.43;
   let uiTextColor: THREE.Color;
   let uiDisabledBgColor: THREE.Color;
+  let uiFocusBgColor: THREE.Color;
 
   if (getLuma(baseColor) < LIGHT_LUMA_THRESHOLD) {
     uiTextColor = WHITE_COLOR;
-    uiDisabledBgColor = new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.2);
+    uiDisabledBgColor = new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.3);
+    uiFocusBgColor = new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.2);
   }
   else {
     uiTextColor = BLACK_COLOR;
-    uiDisabledBgColor = new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.2);
+    uiDisabledBgColor = new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.3);
+    uiFocusBgColor = new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.2);
   }
 
   return {
@@ -179,6 +184,7 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
       textColor: uiTextColor,
       backgroundColor: new THREE.Color(baseColor),
       disabledBackgroundColor: uiDisabledBgColor,
+      focusBackgroundColor: uiFocusBgColor,
       borderColor: new THREE.Color(secondaryColor)
     }
   };
@@ -212,6 +218,7 @@ export const defaultTheme: Theme = {
     textColor: new THREE.Color(BLACK_COLOR),
     backgroundColor: new THREE.Color(WHITE_COLOR),
     disabledBackgroundColor: new THREE.Color(WHITE_COLOR).lerp(BLACK_COLOR, 0.25),
+    focusBackgroundColor: new THREE.Color(WHITE_COLOR).lerp(BLACK_COLOR, 0.15),
     borderColor: new THREE.Color(BLACK_COLOR)
   }
 };

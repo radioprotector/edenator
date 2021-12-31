@@ -2,6 +2,7 @@ html {
   --ui-color-text: black;
   --ui-color-contrast: white;
   --ui-color-contrast-disabled: #bfbfbf;
+  --ui-color-contrast-focus: #d9d9d9;
   --ui-color-border: black;
 }
 
@@ -42,6 +43,16 @@ html {
 
 #dummyFilePicker:disabled, #themeCycler:disabled {
   background-color: var(--ui-color-contrast-disabled);
+}
+
+#dummyFilePicker:hover, #themeCycler:hover {
+  box-shadow: 0 0 3px 2px var(--ui-color-border);
+}
+
+#dummyFilePicker:focus, #themeCycler:focus {
+  outline: 1px dotted var(--ui-color-border);
+  text-decoration: underline;
+  background-color: var(--ui-color-contrast-focus);
 }
 
 #sourceFile {
