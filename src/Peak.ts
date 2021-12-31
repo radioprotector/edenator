@@ -3,27 +3,22 @@
  */
 export default interface Peak {
   /**
-   * The time at which the peak was encountered, in seconds.
+   * The time at which the peak was encountered, in fractional seconds.
    */
   time: number;
 
   /**
-   * The end of the peak, in seconds.
+   * The end of the peak, in fractional seconds.
    */
    end: number;
 
   /**
-   * The intensity of the peak on a 0.0-1.0 scale.
+   * The maximum intensity of the peak on a 0.0-1.0 scale.
    */
   intensity: number;
 
   /**
-   * The intensity of the peak on a 0.0-1.0 scale, normalized relative to the current volume.
+   * The maximum intensity of the peak on a floating-point scale, normalized relative to the current volume.
    */
    intensityNormalized: number;
-
-  /**
-   * The number of sample frames for which the peak was encountered.
-   */
-  frames: number;
 }

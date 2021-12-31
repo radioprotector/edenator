@@ -131,9 +131,13 @@ interface PeakAnalysisArgs {
   
   expectedMaxPeaksPerMinute: number;
 
-  absoluteThreshold: number;
+  initialAbsoluteThreshold: number;
 
-  relativeThreshold: number;
+  initialRelativeThreshold: number;
+
+  sustainAbsoluteThreshold: number;
+
+  sustainRelativeThreshold: number;
 }
 
 /**
@@ -375,40 +379,38 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
           continue;
         }
 
-        let currentFrameIntensity = Math.abs(frames[frameIdx]);
-        let currentFrameIntensityNormalized = currentFrameIntensity / overallVolume[frameIdx];
+        let absoluteIntensity = Math.abs(frames[frameIdx]);
+        let relativeIntensity = absoluteIntensity / overallVolume[frameIdx];
 
         // See if we're ready to start a new peak
-        if (currentFrameIntensity >= analysisArgs.absoluteThreshold && currentFrameIntensityNormalized >= analysisArgs.relativeThreshold)
+        if (absoluteIntensity >= analysisArgs.initialAbsoluteThreshold && relativeIntensity >= analysisArgs.initialRelativeThreshold)
         {
           // Start a new peak, and mark when it was encountered
-          const newPeak = {
+          const newPeak: Peak = {
             time: frameIdx / ANALYZER_SAMPLE_RATE,
             intensity: 0,
             intensityNormalized: 0,
-            frames: 0,
             end: 0 // To be calculated
           };
 
           // Determine the maximum intensity and number of frames it was above the threshold
           do {
             // See if this peak reached a new intensity
-            newPeak.intensity = Math.max(newPeak.intensity, currentFrameIntensity)
-            newPeak.intensityNormalized = Math.max(newPeak.intensityNormalized, currentFrameIntensityNormalized)
-            newPeak.frames++;
+            newPeak.intensity = Math.max(newPeak.intensity, absoluteIntensity)
+            newPeak.intensityNormalized = Math.max(newPeak.intensityNormalized, relativeIntensity)
 
             // Look at the next frame.
             // If we have audio data, recalculate the current intensity (both absolute and normalized)
-            // and see whether we can keep going
+            // and see whether we can keep going based on the *sustain* thresholds
             frameIdx++;
 
             if (frameIdx >= frames.length || overallVolume[frameIdx] === 0) {
               break;
             }
 
-            currentFrameIntensity = Math.abs(frames[frameIdx]);
-            currentFrameIntensityNormalized = currentFrameIntensity / overallVolume[frameIdx];
-          } while(currentFrameIntensity >= analysisArgs.absoluteThreshold && currentFrameIntensityNormalized >= analysisArgs.relativeThreshold)
+            absoluteIntensity = Math.abs(frames[frameIdx]);
+            relativeIntensity = absoluteIntensity / overallVolume[frameIdx];
+          } while(absoluteIntensity >= analysisArgs.sustainAbsoluteThreshold && relativeIntensity >= analysisArgs.sustainRelativeThreshold)
 
           // Now calculate the end of the peak
           newPeak.end = frameIdx / ANALYZER_SAMPLE_RATE;
@@ -492,32 +494,40 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
     minFrequency: 20,
     maxFrequency: 50,
     expectedMaxPeaksPerMinute: 60,
-    absoluteThreshold: 0.4,
-    relativeThreshold: 0.5
+    initialAbsoluteThreshold: 0.4,
+    initialRelativeThreshold: 0.5,
+    sustainAbsoluteThreshold: 0.4,
+    sustainRelativeThreshold: 0.5
   }));
 
   const bass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {
     minFrequency: 50,
     maxFrequency: 90,
     expectedMaxPeaksPerMinute: 120,
-    absoluteThreshold: 0.4,
-    relativeThreshold: 0.5
+    initialAbsoluteThreshold: 0.4,
+    initialRelativeThreshold: 0.5,
+    sustainAbsoluteThreshold: 0.4,
+    sustainRelativeThreshold: 0.5
   }));
 
   const beat = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {
     minFrequency: 90,
     maxFrequency: 250,
     expectedMaxPeaksPerMinute: 300,
-    absoluteThreshold: 0.4,
-    relativeThreshold: 0.5
+    initialAbsoluteThreshold: 0.4,
+    initialRelativeThreshold: 0.5,
+    sustainAbsoluteThreshold: 0.4,
+    sustainRelativeThreshold: 0.5
   }));
 
   const treble = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {
     minFrequency: 2048,
     maxFrequency: null,
     expectedMaxPeaksPerMinute: 120,
-    absoluteThreshold: 0.35,
-    relativeThreshold: 0.4
+    initialAbsoluteThreshold: 0.4,
+    initialRelativeThreshold: 0.5,
+    sustainAbsoluteThreshold: 0.35,
+    sustainRelativeThreshold: 0.4
   }));
 
   return Promise.all([tags, subBass, bass, beat, treble])
