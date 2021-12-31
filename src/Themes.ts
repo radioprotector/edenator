@@ -138,7 +138,12 @@ function getLuma(color: THREE.Color): number {
   return (0.2126 * getLumaComponent(color.r)) + (0.7152 * getLumaComponent(color.g)) + (0.0722 * getLumaComponent(color.b));
 }
 
-function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryColor: THREE.Color): Theme {
+function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryColor: THREE.Color, tertiaryColor: THREE.Color | null = null): Theme {
+  // Default the tertiary color if not specified
+  if (tertiaryColor === null) {
+    tertiaryColor = new THREE.Color(baseColor).lerp(secondaryColor, 0.5);
+  }
+
   // Determine the UI text color to use
   const LIGHT_LUMA_THRESHOLD = 0.43;
   let uiTextColor: THREE.Color;
@@ -159,8 +164,8 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
   return {
     name: name,
     bass: {
-      wireframeColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(BLACK_COLOR, 0.3),
-      panelColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.5).lerp(BLACK_COLOR, 0.2)
+      wireframeColor: new THREE.Color(tertiaryColor).lerp(BLACK_COLOR, 0.3),
+      panelColor: new THREE.Color(tertiaryColor)
     },
     beat: {
       color: new THREE.Color(baseColor)
@@ -171,11 +176,11 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
       lightColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.75),
     },
     frequencyGrid: {
-      lineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75)
+      lineColor: new THREE.Color(secondaryColor)
     },
     background: {
       fillColor: new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.97),
-      sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.6),
+      sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.5),
       burstLineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.25),
       starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.1),
       starFlashColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75)
@@ -190,38 +195,7 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
   };
 }
 
-export const defaultTheme: Theme = {
-  name: 'default',
-  bass: {
-    wireframeColor: new THREE.Color(0x8f074b),
-    panelColor: new THREE.Color(0x850707)
-  },
-  beat: {
-    color: new THREE.Color(0x770077)
-  },
-  treble: {
-    spriteColor: new THREE.Color(0xffaaff),
-    spriteTexture: 'textures/extendring.png',
-    lightColor: new THREE.Color(0xffffff)
-  },
-  frequencyGrid: {
-    lineColor: new THREE.Color(0xaa00aa)
-  },
-  background: {
-    fillColor: new THREE.Color(BLACK_COLOR),
-    sunColor: new THREE.Color(0xffcc55),
-    burstLineColor: new THREE.Color(0xffffaa),
-    starColor: new THREE.Color(0xaa66aa),
-    starFlashColor: new THREE.Color(0xccaacc)
-  },
-  ui: {
-    textColor: new THREE.Color(BLACK_COLOR),
-    backgroundColor: new THREE.Color(WHITE_COLOR),
-    disabledBackgroundColor: new THREE.Color(WHITE_COLOR).lerp(BLACK_COLOR, 0.25),
-    focusBackgroundColor: new THREE.Color(WHITE_COLOR).lerp(BLACK_COLOR, 0.15),
-    borderColor: new THREE.Color(BLACK_COLOR)
-  }
-};
+export const defaultTheme = generateThemeForColor('default', new THREE.Color(0xEB4500), new THREE.Color(0xF60E0C), new THREE.Color(0xF6960C));
 
 const magentaTheme = generateThemeForColor('magenta', new THREE.Color('Orchid'), new THREE.Color('DarkOrchid'));
 const indigoTheme = generateThemeForColor('indigo', new THREE.Color('BlueViolet'), new THREE.Color('DarkViolet'));
@@ -235,6 +209,10 @@ const yellowTheme = generateThemeForColor('yellow', new THREE.Color('Gold'), new
 const orangeTheme = generateThemeForColor('orange', new THREE.Color('OrangeRed'), new THREE.Color('Tomato'));
 const redTheme = generateThemeForColor('red', new THREE.Color('Red'), new THREE.Color('Coral'));
 const pinkTheme = generateThemeForColor('pink', new THREE.Color('HotPink'), new THREE.Color('PaleVioletRed'));
+
+const hotdogStandTheme = generateThemeForColor('hotdog stand', new THREE.Color(0xff0000), new THREE.Color(0xffff00));
+const fluorescentTheme = generateThemeForColor('fluorescent', new THREE.Color(0xff00ff), new THREE.Color(0x00ff00));
+const plasmaPowerSaverTheme = generateThemeForColor('plasma power saver', new THREE.Color(0x0000ff), new THREE.Color(0xff00ff), new THREE.Color(0xAD0052));
 
 /**
  * An array of all themes that can be assigned randomly by getThemeForTrack.
@@ -252,7 +230,10 @@ const ALL_THEMES = [
   yellowTheme,
   orangeTheme,
   redTheme,
-  pinkTheme
+  pinkTheme,
+  hotdogStandTheme,
+  fluorescentTheme,
+  plasmaPowerSaverTheme
 ];
 
 export function getThemeForTrack(track: TrackAnalysis): Theme {
@@ -315,6 +296,9 @@ export function getThemeForTrack(track: TrackAnalysis): Theme {
     case OpenKey.F_Major:
     case OpenKey.D_Minor:
       return pinkTheme;
+
+    case OpenKey.OffKey:
+      return hotdogStandTheme;
 
     default:
       return defaultTheme;
