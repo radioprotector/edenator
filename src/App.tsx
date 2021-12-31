@@ -19,7 +19,8 @@ function App(): JSX.Element {
   const setStoreAudioSeeked = useStore(store => store.indicateAudioSeeked);
 
   // XXX: Investigate supprting webkitAudioContext
-  const audioContext = useMemo(() => new AudioContext(), []);
+  // audioContext is a ref so that we can try to preserve state during fast-refresh in Chrome
+  const audioContext = useRef(new AudioContext());
   const introElement = useRef<HTMLDivElement>(null!);
   const sourceFileElement = useRef<HTMLInputElement>(null!);
   const dummyFileButtonElement = useRef<HTMLButtonElement>(null!);
@@ -28,16 +29,28 @@ function App(): JSX.Element {
   // These are indirect refs set up via audio player callback
   const audioPlayerElement = useRef<HTMLAudioElement | null>(null);
   const audioAnalyser = useRef<AnalyserNode | null>(null);
+  const mediaElementSourceNodes = useRef(new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>());
   
   // Ensure that the audio player has an audio context/analyzer node set up
   const audioPlayerRef = useCallback(
     (node: HTMLAudioElement) => {
       if (node != null) {
-        const audioSource = new MediaElementAudioSourceNode(audioContext, { mediaElement: node });
-        const analyser = new AnalyserNode(audioContext, { fftSize: 128 });
+        // HACK: Work around hot-reload issues in Chrome by ensuring we re-use media source nodes
+        // https://stackoverflow.com/a/39725071
+        let audioSource: MediaElementAudioSourceNode;
+
+        if (mediaElementSourceNodes.current.has(node)) {
+          audioSource = mediaElementSourceNodes.current.get(node)!;
+        }
+        else {
+          audioSource = new MediaElementAudioSourceNode(audioContext.current, { mediaElement: node });
+          mediaElementSourceNodes.current.set(node, audioSource);
+        }
+
+        const analyser = new AnalyserNode(audioContext.current, { fftSize: 128 });
 
         audioSource.connect(analyser);
-        analyser.connect(audioContext.destination);
+        analyser.connect(audioContext.current.destination);
 
         audioPlayerElement.current = node;
         audioAnalyser.current = analyser;
