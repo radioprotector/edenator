@@ -1,9 +1,14 @@
-import { RefObject, useMemo, useRef } from 'react';
+import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
 import { generateNumericArray } from './Utils';
 import { useStore } from './visualizerStore';
+
+/**
+ * The material to use for all frequency lines.
+ */
+const frequencyLineMaterial = new THREE.LineBasicMaterial();
 
 function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Track how many rows we have, where the first row starts, depth-wise, and the spacing between each row  
@@ -22,7 +27,16 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
 
   // Pull our store items
   const trackAnalysis = useStore(state => state.analysis);
-  const frequencyTheme = useStore(state => state.theme.frequencyGrid);
+
+  // Because the line material is cached across multiple renders, just ensure the color reflects the state.
+  frequencyLineMaterial.color = useStore().theme.frequencyGrid.lineColor;
+
+  useEffect(() => useStore.subscribe(
+    state => state.theme.frequencyGrid.lineColor,
+    (newLineColor) => {
+      frequencyLineMaterial.color = newLineColor;
+    }),
+    []);
 
   // Construct the set of points to use for each line
   const pointSet = useMemo(() => {
@@ -64,10 +78,8 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   // Construct multiple lines from the geometry
   const rowLines = useRef<THREE.Line[]>([]);
   const rowElements = useMemo(() => {
-    const lineMaterial = new THREE.LineBasicMaterial({color: frequencyTheme.lineColor});
-
     return generateNumericArray(FREQUENCY_ROWS).map((rowIndex) => {
-      const line = new THREE.Line(frequencyGeometry, lineMaterial);
+      const line = new THREE.Line(frequencyGeometry, frequencyLineMaterial);
       line.position.set(0, -10, STARTING_DEPTH + (DEPTH_SPACING * rowIndex));
       line.scale.set(0.6, THREE.MathUtils.mapLinear(rowIndex, 0, FREQUENCY_ROWS - 1, 1.0, 0.1), 1.0);
 
@@ -80,7 +92,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
         key={rowIndex}
       />
     })
-    }, [frequencyTheme, frequencyGeometry, STARTING_DEPTH, DEPTH_SPACING, FREQUENCY_ROWS]);
+    }, [frequencyGeometry, STARTING_DEPTH, DEPTH_SPACING, FREQUENCY_ROWS]);
 
   useFrame((state, delta) => {
     if (props.analyser.current === null || props.audio.current === null) {

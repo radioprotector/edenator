@@ -41,7 +41,9 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
 
   const trackAnalysis = useStore(state => state.analysis);
 
-  // Because the material is cached across multiple renders, just ensure the color reflects the state.
+  // Because the beat material is cached across multiple renders, just ensure the color reflects the state.
+  beatMeshMaterial.color = useStore().theme.beat.color;
+
   useEffect(() => useStore.subscribe(
     state => state.theme.beat.color,
     (newBeatColor) => {
@@ -53,20 +55,13 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   const availableMeshElements = 
     generateNumericArray(SIDES * 6).map((sideNumber) => {
       return <mesh
+        key={sideNumber}
         ref={(mesh: THREE.Mesh) => availableMeshesRing.current[sideNumber] = mesh}
         visible={false}
         position={getBasePosition(sideNumber, SIDES, RADIUS)}
-        key={sideNumber}
-      >
-        <primitive
-          object={beatGeometry}
-          attach='geometry'
-        />
-        <primitive
-          object={beatMeshMaterial} 
-          attach='material'
-        />
-      </mesh>
+        geometry={beatGeometry}
+        material={beatMeshMaterial}
+      />
     });
 
   // Ensure we reset the next peak index when analysis changes (or we seeked).
@@ -134,6 +129,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       // See if we've finished peaking, which means we should hide the mesh
       if (peakDisplayStart > audioTime || peakDisplayEnd < lastRenderTime) {
         meshForPeak.visible = false;
+        delete meshForPeak.userData['peak'];
         continue;
       }
 

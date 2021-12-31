@@ -29,6 +29,11 @@ function buildLineRingGeometry(innerRadius: number, maxOuterRadius: number, pert
   return geometry; 
 }
 
+/**
+ * A geometry that is intended to act as a backdrop for the entire scene.
+ */
+const backdropGeometry = new THREE.PlaneGeometry(2048, 2048);
+
 function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Load background textures
   const textures = useTexture({
@@ -222,11 +227,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         <lineSegments
           ref={firstLineRing}
           position={[0, 0, -250]}
+          geometry={firstRingGeometry}
         >
-          <primitive
-            object={firstRingGeometry}
-            attach='geometry'
-          />
           <lineBasicMaterial
             color={backgroundTheme.burstLineColor}
             transparent={true}
@@ -238,11 +240,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         <lineSegments
           ref={secondLineRing}
           position={[0, 0, -250]}
+          geometry={secondRingGeometry}
         >
-          <primitive
-            object={secondRingGeometry}
-            attach='geometry'
-          />
           <lineBasicMaterial
             color={backgroundTheme.burstLineColor}
             transparent={true}
@@ -254,11 +253,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         <lineSegments
           ref={thirdLineRing}
           position={[0, 0, -250]}
+          geometry={thirdRingGeometry}
         >
-          <primitive
-            object={thirdRingGeometry}
-            attach='geometry' 
-          />
           <lineBasicMaterial
             color={backgroundTheme.burstLineColor}
             transparent={true}
@@ -274,10 +270,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           position={[0, 0, -599]}
           scale={[2, 2, 1]}
           frustumCulled={false}
+          geometry={backdropGeometry}
         >
-          <planeGeometry
-            args={[2048, 2048]}
-          />
           <meshBasicMaterial
             color={backgroundTheme.starFlashColor}
             map={textures.star_first_glow}
@@ -293,10 +287,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           position={[0, 0, -600]}
           scale={[2, 2, 1]}
           frustumCulled={false}
+          geometry={backdropGeometry}
         >
-          <planeGeometry
-            args={[2048, 2048]}
-          />
           <meshBasicMaterial
             color={backgroundTheme.starColor}
             map={textures.star_first}
@@ -312,10 +304,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           position={[0, 0, -699]}
           scale={[2, 2, 1]}
           frustumCulled={false}
+          geometry={backdropGeometry}
         >
-          <planeGeometry
-            args={[2048, 2048]}
-          />
           <meshBasicMaterial
             color={backgroundTheme.starFlashColor}
             map={textures.star_second_glow}
@@ -331,10 +321,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           position={[0, 0, -700]}
           scale={[2, 2, 1]}
           frustumCulled={false}
+          geometry={backdropGeometry}
         >
-          <planeGeometry
-            args={[2048, 2048]}
-          />
           <meshBasicMaterial
             color={backgroundTheme.starColor}
             map={textures.star_second}
@@ -350,10 +338,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           position={[0, 0, -799]}
           scale={[2, 2, 1]}
           frustumCulled={false}
+          geometry={backdropGeometry}
         >
-          <planeGeometry
-            args={[2048, 2048]}
-          />
           <meshBasicMaterial
             color={backgroundTheme.starFlashColor}
             map={textures.star_third_glow}
@@ -369,10 +355,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
           position={[0, 0, -800]}
           scale={[2, 2, 1]}
           frustumCulled={false}
+          geometry={backdropGeometry}
         >
-          <planeGeometry
-            args={[2048, 2048]}
-          />
           <meshBasicMaterial
             color={backgroundTheme.starColor}
             map={textures.star_third}

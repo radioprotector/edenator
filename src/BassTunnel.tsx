@@ -70,6 +70,21 @@ boxLineGeometry.setFromPoints([
   new THREE.Vector3(0.5, -0.5, -0.5),
 ]);
 
+/**
+ * The material to use for all wireframe lines.
+ */
+const boxLineMaterial = new THREE.LineBasicMaterial();
+
+/**
+  * The geometry to use for all filler panels.
+  */
+const panelFillGeometry = new THREE.PlaneGeometry();
+ 
+/**
+  * The material to use for all filler panels.
+  */
+const panelFillMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+
 const enum SegmentDisplay {
   SegmentHidden = 0,
   MIN = SegmentHidden,
@@ -163,7 +178,24 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
   let nextSubBassIndex = 0;
   
   const trackAnalysis = useStore(state => state.analysis);
-  const bassTheme = useStore(state => state.theme.bass); 
+
+  // Because the wireframe/filler materials are cached across multiple renders, just ensure the colors reflects the state.
+  boxLineMaterial.color = useStore().theme.bass.wireframeColor;
+  panelFillMaterial.color = useStore().theme.bass.panelColor;
+  
+  useEffect(() => useStore.subscribe(
+    state => state.theme.bass.wireframeColor,
+    (newLineColor) => {
+      boxLineMaterial.color = newLineColor;
+    }),
+    []);
+  
+  useEffect(() => useStore.subscribe(
+    state => state.theme.bass.panelColor,
+    (newFillColor) => {
+      panelFillMaterial.color = newFillColor;
+    }),
+    []);
 
   // Store references to each tunnel segment group and its constituent elements (box/plane)
   const tunnelSegments = useRef<THREE.Group[]>([]);
@@ -180,24 +212,17 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
           <lineSegments
             ref={(seg: THREE.LineSegments) => tunnelSegmentBoxes.current[segmentIndex] = seg}
             scale={[SEGMENT_WIDTH, SEGMENT_HEIGHT, SEGMENT_DEPTH]}
-          >
-            <primitive object={boxLineGeometry} attach='geometry' />
-            <lineBasicMaterial color={bassTheme.wireframeColor} />
-          </lineSegments>   
+            geometry={boxLineGeometry}
+            material={boxLineMaterial}
+          />
           <mesh
             ref={(plane: THREE.Mesh) => tunnelSegmentPlanes.current[segmentIndex] = plane}
-          >
-            <planeGeometry />
-            <meshBasicMaterial
-              color={bassTheme.panelColor}
-              side={THREE.DoubleSide}
-              transparent={true}
-              opacity={0.6}
-            />
-          </mesh>
+            geometry={panelFillGeometry}
+            material={panelFillMaterial}
+          />
         </group>
       });
-    }, [bassTheme]);
+    }, []);
 
   // Determine the amount of time it should take for a segment to scroll the length of the tunnel
   const tunnelTraversalPeriodSeconds = useMemo(() => {
