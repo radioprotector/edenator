@@ -84,7 +84,15 @@ function App(): JSX.Element {
           if (audioPlayerElement.current !== null) {
             audioPlayerElement.current.src = newAudioUrl;
             audioPlayerElement.current.load();
-            audioPlayerElement.current.play();
+
+            // HACK: Play the audio player in an event loop *after* we've finished handling the file selection.
+            // Even though the file selector has been clicked, we're still in the event handler for that
+            // so Chrome's auto-play blocking doesn't consider the interaction "complete".
+            window.setTimeout(() => {
+              if (audioPlayerElement.current) {
+                audioPlayerElement.current.play();
+              }
+            })       
           }
 
           // Free the previously-playing URL over if we had one
