@@ -43,7 +43,7 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
             blending={THREE.CustomBlending}
             blendEquation={THREE.AddEquation}
             blendSrc={THREE.SrcAlphaFactor}
-            blendDst={THREE.OneMinusSrcColorFactor}
+            blendDst={THREE.OneFactor}
           />
         </sprite>
         <pointLight
