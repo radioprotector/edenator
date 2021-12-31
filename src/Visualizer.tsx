@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useMemo } from 'react';
+import { RefObject, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 
