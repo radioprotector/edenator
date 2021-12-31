@@ -18,6 +18,8 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
   const PEAK_DEPTH_END = 10;
   const BASE_LIGHT_INTENSITY = 20;
   const BASE_LIGHT_DISTANCE = 20;
+  const MIN_DISTRIBUTION_RADIUS = 12;
+  const MAX_DISTRIBUTION_RADIUS = 20;
 
   const trackAnalysis = useStore(state => state.analysis);
   const trebleTheme = useStore(state => state.theme.treble);
@@ -65,8 +67,8 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
     }),
     []);
 
-  useFrame((state, delta) => {
-    if (props.audio.current === null || availableTrebleGroupsRing.current === null) {
+  useFrame((_state, delta) => {
+    if (props.audio.current === null) {
       return;
     }
 
@@ -96,7 +98,7 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
 
       // Randomize the position of the group
       const angle = trackAnalysis.getTrackSeededRandomInt(0, 359, curPeak.time) * THREE.MathUtils.DEG2RAD;
-      const radius = trackAnalysis.getTrackSeededRandomInt(12, 20, curPeak.time);
+      const radius = trackAnalysis.getTrackSeededRandomInt(MIN_DISTRIBUTION_RADIUS, MAX_DISTRIBUTION_RADIUS, curPeak.time);
       
       groupForPeak.position.x = Math.cos(angle) * radius;
       groupForPeak.position.y = Math.sin(angle) * radius;

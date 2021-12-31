@@ -7,7 +7,7 @@ import { GodRaysEffect, BlendFunction, Resizer, KernelSize } from 'postprocessin
 function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }): JSX.Element {
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
   
-  useFrame((state, delta) => {
+  useFrame(() => {
     if (props.audio.current === null || props.audio.current.currentTime <= 0 || props.analyser.current === null || godRaysEffect.current === null) {
       return;
     }
@@ -51,7 +51,7 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         density={0.85}
         decay={0.85}
         weight={0.4}
-        exposure={0.9}
+        exposure={0.4}
         clampMax={1}
         width={Resizer.AUTO_SIZE}
         height={Resizer.AUTO_SIZE}

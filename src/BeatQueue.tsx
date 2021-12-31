@@ -77,8 +77,8 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
     }),
     []);
 
-  useFrame((state, delta) => {
-    if (props.audio.current === null || availableMeshesRing.current === null) {
+  useFrame((_state, delta) => {
+    if (props.audio.current === null) {
       return;
     }
 

@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 
-import { TrackAnalysis } from './TrackAnalysis';
 import { useStore } from './visualizerStore';
 
 const FULL_RADIANS = 2 * Math.PI;
