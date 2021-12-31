@@ -149,7 +149,12 @@ interface PeakAnalysisArgs {
           resolve(tagData)
         },
         onError: (error) => {
-          reject(error);
+          // Wrap the jsmediatagsError into a true error object
+          // XXX: This won't let us use options.cause
+          const wrappedError = new Error(error.info);
+          wrappedError.name = 'MediaTagsError';
+
+          reject(wrappedError);
         }
       })
   });
@@ -254,7 +259,9 @@ function getKeyTagValue(tagCollection: TagType): OpenKey | null {
     return keyValue as OpenKey;
   }
   else {
-    console.debug(`unrecognized key value: ${keyValue}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug(`unrecognized key value: ${keyValue}`);
+    }
     return null;
   }
 }
@@ -268,7 +275,9 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
 
   return dummyAudioContext.decodeAudioData(audioData)
   .then((decodedData: AudioBuffer) => {
-    // console.debug('audio decoded', decodedData);
+    // if (process.env.NODE_ENV !== 'production') {
+    //   console.debug('audio decoded', decodedData);
+    // }
     const audioContext = new window.OfflineAudioContext(1, decodedData.length, ANALYZER_SAMPLE_RATE);
     const bufferSource = audioContext.createBufferSource();
     bufferSource.buffer = decodedData;
@@ -279,8 +288,6 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
     return audioContext.startRendering();
   })
   .then((renderedBuffer: AudioBuffer) => {
-    // console.debug('volume analyzed', renderedBuffer);
-    // return renderedBuffer.getChannelData(0);
     const rawSamples = renderedBuffer.getChannelData(0);
 
     // Convert the channel data to the equivalent volume
@@ -312,8 +319,9 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
       }
     }
 
-    // console.debug('volume analyzed', renderedBuffer, smoothedVolume);
-
+    // if (process.env.NODE_ENV !== 'production') {
+    //   console.debug('volume analyzed', renderedBuffer, smoothedVolume);
+    // }
     return smoothedVolume;
   });
 }
@@ -351,8 +359,10 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
       bufferSource.start(0);
       return audioContext.startRendering();
     })
-    .then((renderedBuffer: AudioBuffer) => {
-      // console.debug(`buffer for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency}`, renderedBuffer);
+    .then((renderedBuffer: AudioBuffer) => {    
+      // if (process.env.NODE_ENV !== 'production') {
+      //   console.debug(`buffer for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency}`, renderedBuffer);
+      // }
       const frames = renderedBuffer.getChannelData(0);
       const peaksList: Peak[] = [];
       const peaksHistogram: { [roundedIntensity: string]: number } = {};
@@ -398,10 +408,6 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
 
             currentFrameIntensity = Math.abs(frames[frameIdx]);
             currentFrameIntensityNormalized = currentFrameIntensity / overallVolume[frameIdx];
-
-            // if (currentFrameIntensityNormalized > 1) {
-            //   console.debug('INTENSITY OUT OF RANGE', { currentFrameIntensity, currentFrameIntensityNormalized });
-            // }
           } while(currentFrameIntensity >= analysisArgs.absoluteThreshold && currentFrameIntensityNormalized >= analysisArgs.relativeThreshold)
 
           // Now calculate the end of the peak
@@ -426,8 +432,10 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
 
         frameIdx++;
       }
-
-      console.debug(`peak histogram for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency}`, peaksHistogram);
+  
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`peak histogram for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency}`, peaksHistogram);
+      }
 
       // See if we have too many peaks - if so, trim
       const expectedMaximumPeaks = Math.ceil(analysisArgs.expectedMaxPeaksPerMinute * renderedBuffer.duration / 60);
@@ -457,7 +465,10 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
         }
 
         // Once we determine the cutoff, filter out elements that don't match
-        console.debug(`cutting off peaks for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency} at ${intensityCutoff}`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug(`cutting off peaks for ${analysisArgs.minFrequency} to ${analysisArgs.maxFrequency} at ${intensityCutoff}`);
+        }
+
         return peaksList.filter((p) => p.intensityNormalized >= intensityCutoff);
       }
 
@@ -466,7 +477,15 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
 }
 
 export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
-  const tags = getTrackTags(file);
+  let tags: TagType;
+
+  try {
+    tags = await getTrackTags(file);
+  }
+  catch (error) {
+    return Promise.reject(error);
+  }
+
   const overallVolume = await file.arrayBuffer().then((byteBuffer) => getTrackVolume(byteBuffer));
 
   const subBass = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {

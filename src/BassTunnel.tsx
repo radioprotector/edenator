@@ -163,7 +163,10 @@ function randomizeTunnelSegment(segmentIndex: number, segment: THREE.Group, plan
       break;
 
     default:
-      console.trace(`unexpected display mode: ${segmentDisplayMode} for segment ${segmentIndex}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.trace(`unexpected display mode: ${segmentDisplayMode} for segment ${segmentIndex}`);
+      }
+      planeForSegment.visible = false;
       break;
   }
 }

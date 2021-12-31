@@ -73,7 +73,9 @@ function App(): JSX.Element {
 
       analyzeTrack(trackFile)
         .then((analyzerResult) => {
-          console.log(analyzerResult);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(analyzerResult);
+          }
 
           // Create a URL for the new file
           const newAudioUrl = URL.createObjectURL(trackFile);
@@ -97,7 +99,7 @@ function App(): JSX.Element {
           setStoreAudioSeeked();
         })
         .catch((reason: any) => {
-          console.error(reason); 
+          console.error(reason);
           setFileError(`Error opening "${trackFile?.name}":\n${reason.toString()}`);
         })
         .finally(() => {
@@ -121,7 +123,11 @@ function App(): JSX.Element {
 
   const cycleTheme = () => {
     const nextTheme = getNextTheme(useStore.getState().theme);
-    console.debug(`switching to ${nextTheme.name} theme`);
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug(`switching to ${nextTheme.name} theme`);
+    }
+
     setStoreTheme(nextTheme);
   };
 
@@ -207,10 +213,15 @@ function App(): JSX.Element {
           />
         </Suspense>
       </div>
-      <Stats
-        showPanel={0}
-        className="stats"
-      />
+      {/* Only include stats in development */}
+      {
+        process.env.NODE_ENV !== 'production'
+        &&
+        <Stats
+          showPanel={0}
+          className="stats"
+        />
+      }   
     </div>
   );
 }
