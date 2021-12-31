@@ -107,7 +107,6 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     let ringOpacityFactor = 0.0;
     let ringScaleFactor = 0.0;
     let horizonOpacityFactor = 0.0;
-    let starFlashOpacityFactor = 0.0;
 
     if (currentTrackTime > 0 && props.analyser.current !== null) {
       const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
@@ -123,8 +122,8 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         ringScaleFactor = (frequencies[7] / 255.0) / 4;
       }
 
-      if (Number.isFinite(frequencies[32])) {
-        horizonOpacityFactor = (frequencies[32] / 255.0) / 3;
+      if (Number.isFinite(frequencies[31])) {
+        horizonOpacityFactor = (frequencies[31] / 255.0) / 3;
       }
     }
 
@@ -162,10 +161,10 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         ref={horizonLayer}
         frustumCulled={false}
         position={[0, 0, -300]}
-        scale={[8, 0.25, 1]}
+        scale={[8, 0.125, 1]}
       >
         <planeGeometry
-          args={[1024, 256]}
+          args={[1024, 512]}
         />
         <meshBasicMaterial
           color={backgroundTheme.starFlashColor}
