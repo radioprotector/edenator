@@ -42,7 +42,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
         key={sideNumber}
       >
         <sphereGeometry />
-        <meshPhongMaterial color={beatTheme.color} />
+        <meshPhongMaterial color={beatTheme.color} shininess={0.5} />
       </mesh>
     });
 
@@ -106,7 +106,6 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       }
 
       const peakDisplayStart = peakData.time - LOOKAHEAD_PERIOD;
-      const peakEmissiveStart = peakDisplayStart + (LOOKAHEAD_PERIOD * 0.5);
       const peakDisplayEnd = peakData.end + DECAY_PERIOD;
 
       // See if we've finished peaking, which means we should hide the mesh
@@ -119,20 +118,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       meshForPeak.visible = true;
       meshForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, PEAK_DEPTH_START, PEAK_DEPTH_END);
 
-      // Tweak shininess and scaling if we're during the actual beat
-      const material = (meshForPeak.material as THREE.MeshPhongMaterial);
-
-      // Scale shininess between the emission start and the end of the peak
-      if (audioTime >= peakEmissiveStart && audioTime < peakData.end) {
-        material.shininess = THREE.MathUtils.mapLinear(audioTime, peakEmissiveStart, peakData.end, 0.5, 1.0);
-      }
-      else if (audioTime >= peakData.end) {
-        material.shininess = THREE.MathUtils.mapLinear(audioTime, peakData.end, peakDisplayEnd, 1, 0.5);
-      }
-      else {
-        material.shininess = 0.5;
-      }
-
+      // Tweak scaling if we're during the actual beat
       if (audioTime >= peakData.time && audioTime < peakDisplayEnd) {
         meshForPeak.scale.setScalar(THREE.MathUtils.mapLinear(audioTime, peakData.time, peakDisplayEnd, 1.0, 2.0));
       }
