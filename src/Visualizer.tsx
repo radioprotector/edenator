@@ -11,32 +11,27 @@ import TrebleQueue from './TrebleQueue';
 import BackgroundManager from './BackgroundManager';
 import VfxManager from './VfxManager';
 
-function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
-  // Create the sun mesh ahead of time so that we don't have to muck around with refs when passing it to the VFX manager
-  const sunMesh = useMemo(
-    () => {
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(5), 
-        new THREE.MeshBasicMaterial({
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-          color: useStore.getState().theme.background.sunColor, 
-          transparent: true, 
-          fog: false
-        })
-      );
-      
-      mesh.frustumCulled = false;
-      mesh.position.set(0, 0, -200);
-      return mesh;
-    }, 
-    []);
+/**
+ * The material to use for the sun.
+ */
+const sunMaterial = new THREE.MeshBasicMaterial({ transparent: true, fog: false });
 
+/**
+ * The mesh to use for the sun.
+ * Used to simplify ref-passing for the VFX manager.
+ */
+const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(5), sunMaterial);
+sunMesh.frustumCulled = false;
+sunMesh.position.set(0, 0, -200);
+
+function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Ensure that the sun's color is updated in response to theme changes
+  sunMaterial.color = useStore.getState().theme.background.sunColor;
+
   useEffect(() => useStore.subscribe(
     (state) => state.theme.background.sunColor,
     (newSunColor) => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      (sunMesh.material as THREE.MeshBasicMaterial).color = newSunColor;
+      sunMaterial.color = newSunColor;
     }),
     []);
 
