@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useMemo, useEffect, Suspense, useState } from 'react';
+import React, { useRef, useCallback, useEffect, Suspense, useState } from 'react';
 import { Stats } from '@react-three/drei';
 
 import { analyzeTrack } from './Analyzer';
@@ -29,6 +29,8 @@ function App(): JSX.Element {
   // These are indirect refs set up via audio player callback
   const audioPlayerElement = useRef<HTMLAudioElement | null>(null);
   const audioAnalyser = useRef<AnalyserNode | null>(null);
+
+  // Like audioContext, this is a ref so that we can preserve it during Chrome fast-refresh
   const mediaElementSourceNodes = useRef(new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>());
   
   // Ensure that the audio player has an audio context/analyzer node set up
