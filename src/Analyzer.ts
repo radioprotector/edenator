@@ -526,8 +526,8 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
     expectedMaxPeaksPerMinute: 120,
     initialAbsoluteThreshold: 0.4,
     initialRelativeThreshold: 0.5,
-    sustainAbsoluteThreshold: 0.35,
-    sustainRelativeThreshold: 0.4
+    sustainAbsoluteThreshold: 0.25,
+    sustainRelativeThreshold: 0.35
   }));
 
   return Promise.all([tags, subBass, bass, beat, treble])
