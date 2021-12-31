@@ -150,7 +150,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
       }
 
       if (Number.isFinite(frequencies[53])) {
-        starGlowFactor = (frequencies[53] / 255.0) / 6;
+        starGlowFactor = (frequencies[53] / 255.0) / 5;
       }
     }
 
