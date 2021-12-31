@@ -18,6 +18,16 @@ function getBasePosition(sideIdx: number, totalSides: number, scale: number): TH
   return new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(scale);
 }
 
+/**
+ * The geometry to use for all beat meshes.
+ */
+const beatGeometry = new THREE.SphereGeometry();
+
+/**
+ * The material to use for all beat meshes.
+ */
+const beatMeshMaterial = new THREE.MeshPhongMaterial({ shininess: 0.5 });
+
 function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
   let nextAvailableMeshIndex = 0;
@@ -30,7 +40,14 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   const PEAK_DEPTH_END = -10;
 
   const trackAnalysis = useStore(state => state.analysis);
-  const beatTheme = useStore(state => state.theme.beat);
+
+  // Because the material is cached across multiple renders, just ensure the color reflects the state.
+  useEffect(() => useStore.subscribe(
+    state => state.theme.beat.color,
+    (newBeatColor) => {
+      beatMeshMaterial.color = newBeatColor;
+    }),
+    []);
 
   // Generate available meshes for use in a ring buffer
   const availableMeshElements = 
@@ -41,8 +58,14 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
         position={getBasePosition(sideNumber, SIDES, RADIUS)}
         key={sideNumber}
       >
-        <sphereGeometry />
-        <meshPhongMaterial color={beatTheme.color} shininess={0.5} />
+        <primitive
+          object={beatGeometry}
+          attach='geometry'
+        />
+        <primitive
+          object={beatMeshMaterial} 
+          attach='material'
+        />
       </mesh>
     });
 
