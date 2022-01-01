@@ -513,6 +513,8 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
  * @returns The resulting BPM, if successfully detected; otherwise, null.
  */
 function getBpmFromPeaks(beats: Peak[], trackLength: number) : number | null {
+  const MINIMUM_INTERVAL = 0.25;
+
   if (!beats) {
     return null;
   }
@@ -528,7 +530,7 @@ function getBpmFromPeaks(beats: Peak[], trackLength: number) : number | null {
   const intervalHistogram: { [roundedInterval: string]: number } = {};
 
   beats.forEach((beat, index) => {
-    for(let relativeIndex = 1; relativeIndex < 9; relativeIndex++) {
+    for(let relativeIndex = 1; relativeIndex < 10; relativeIndex++) {
       // Make sure we don't skip too far out
       if (index + relativeIndex >= beats.length) {
         break;
@@ -537,13 +539,20 @@ function getBpmFromPeaks(beats: Peak[], trackLength: number) : number | null {
       // Instead of counting all beats equally, count ones with more intensity
       const interval = beats[index + relativeIndex].time - beat.time;
       const roundedInterval = interval.toFixed(2);
-      const averageIntensity = (beats[index + relativeIndex].intensityNormalized + beat.intensityNormalized) / 2;
+      // const averageIntensity = (beats[index + relativeIndex].intensityNormalized + beat.intensityNormalized) / 2;
+
+      // Skip over beats that happen too soon
+      if (interval < MINIMUM_INTERVAL) {
+        continue;
+      }
 
       if (roundedInterval in intervalHistogram) {
-        intervalHistogram[roundedInterval] += averageIntensity;
+        // intervalHistogram[roundedInterval] += averageIntensity;
+        intervalHistogram[roundedInterval]++;
       }
       else {
-        intervalHistogram[roundedInterval] = averageIntensity;
+        // intervalHistogram[roundedInterval] = averageIntensity;
+        intervalHistogram[roundedInterval] = 1;
       }
     }
   });
@@ -565,7 +574,7 @@ function getBpmFromPeaks(beats: Peak[], trackLength: number) : number | null {
     }
 
     // Round the tempo and add all of its intervals
-    const roundedTempoForInterval = tempoForInterval.toFixed(1);
+    const roundedTempoForInterval = tempoForInterval.toFixed(0);
 
     if (roundedTempoForInterval in tempoHistogram) {
       tempoHistogram[roundedTempoForInterval] += intervalHistogram[roundedInterval];
@@ -576,24 +585,68 @@ function getBpmFromPeaks(beats: Peak[], trackLength: number) : number | null {
   });
 
   // Now get the assumed maximum
-  let maximumTempo = 0.0;
-  let maximumIntervals = 0;
+  const sortedTempos = Object.keys(tempoHistogram)
+    .map((k) => {
+      return { 
+        bpm: parseFloat(k), 
+        intervals: tempoHistogram[k]
+      };
+    })
+    .sort((a, b) => b.bpm - a.bpm);
+
+  let modeTempo = 0.0;
+  let modeIntervals = 0;
+  let totalWeightedTempo = 0.0;
+  let totalIntervals = 0.0;
 
   if (process.env.NODE_ENV !== 'production') {
-    console.debug(`histogram for BPM detection`, tempoHistogram);
+    console.debug(`histogram for BPM detection`, sortedTempos);
   }
 
-  Object.keys(tempoHistogram).forEach((roundedTempo) => {
-    const tempoFloat = parseFloat(roundedTempo);
-    const intervals = tempoHistogram[roundedTempo];
-
-    if (intervals > maximumIntervals) {
-      maximumTempo = tempoFloat;
-      maximumIntervals = intervals;
+  sortedTempos.forEach((tempo) => {
+    if (tempo.intervals > modeIntervals) {
+      modeTempo = tempo.bpm;
+      modeIntervals = tempo.intervals;
     }
+
+    totalWeightedTempo += (tempo.bpm * tempo.intervals);
+    totalIntervals += tempo.intervals;
   });
 
-  return maximumTempo;
+  const averageTempo = (totalWeightedTempo / totalIntervals);
+
+  // Calculate median
+  let medianTempo = 0;
+
+  if (totalIntervals > 2 && sortedTempos.length > 1) {
+    // Keep advancing through the sorted tempos list until we've hit halfway in the intervals.
+    // Essentially if we have:
+    // [{bpm: 120, intervals: 2}, {bpm: 125, intervals: 2}, {bpm: 130, intervals: 2}]
+    // then we expect our median BPM to be 125.
+    // We'd also expect the same result for:
+    // [{bpm: 120, intervals: 2}, {bpm: 130, intervals: 2}]
+    let medianIntervals = Math.floor(totalIntervals / 2);
+    let medianTempoIdx = 0;
+
+    while (medianIntervals > 0 && medianTempoIdx < sortedTempos.length) {
+      medianIntervals -= sortedTempos[medianTempoIdx].intervals;
+      medianTempoIdx++;
+    }
+
+    // If we hit *exactly* zero, average with the next tempo bucket - otherwise, use the current tempo
+    if (medianIntervals === 0) {
+      medianTempo = (sortedTempos[medianTempoIdx - 1].bpm + sortedTempos[medianTempoIdx].bpm) / 2;
+    }
+    else {
+      medianTempo = sortedTempos[medianTempoIdx - 1].bpm;
+    }
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug(`calculated BPM mode: ${modeTempo}\tmean: ${averageTempo}\tmedian: ${medianTempo}`);
+  }
+
+  return averageTempo;
 }
 
 export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
@@ -630,7 +683,7 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
 
   const beat = file.arrayBuffer().then((byteBuffer) => getPeaks(byteBuffer, overallVolume, {
     minFrequency: 90,
-    maxFrequency: 250,
+    maxFrequency: 200,
     expectedMaxPeaksPerMinute: 300,
     initialAbsoluteThreshold: 0.4,
     initialRelativeThreshold: 0.5,
@@ -664,7 +717,7 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
       }
       else if (process.env.NODE_ENV !== 'production') {
         let bpmFromPeaks = getBpmFromPeaks(beatResult, trackLength);
-        console.debug(`tag BPM: ${detectedBpm} versus peak BPM: ${bpmFromPeaks}`);
+        console.debug(`tag BPM: ${detectedBpm}\tcalculated BPM: ${bpmFromPeaks}`);
       }
 
       const analysis = new TrackAnalysis()
