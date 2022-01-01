@@ -3,9 +3,9 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 
-import { useStore } from './visualizerStore';
-import { generateNumericArray } from './Utils';
-import Peak from './Peak';
+import { useStore } from '../store/visualizerStore';
+import { generateNumericArray } from '../utils';
+import Peak from '../store/Peak';
 
 function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;

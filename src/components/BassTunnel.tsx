@@ -2,9 +2,9 @@ import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
-import { generateNumericArray } from './Utils';
-import { TrackAnalysis } from './TrackAnalysis';
-import { useStore } from './visualizerStore';
+import { generateNumericArray } from '../utils';
+import { TrackAnalysis } from '../store/TrackAnalysis';
+import { useStore } from '../store/visualizerStore';
 
 const QUARTER_TURN = Math.PI / 2;
 

@@ -2,9 +2,9 @@ import { RefObject, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
-import { useStore } from './visualizerStore';
-import { generateNumericArray } from './Utils';
-import Peak from './Peak';
+import { useStore } from '../store/visualizerStore';
+import { generateNumericArray } from '../utils';
+import Peak from '../store/Peak';
 
 function getBasePosition(sideIdx: number, totalSides: number, scale: number): THREE.Vector3 {
   // Modulo the side index so that we'll always get a value that maps within [0, 360) degree range

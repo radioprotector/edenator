@@ -2,8 +2,8 @@ import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
-import { generateNumericArray } from './Utils';
-import { useStore } from './visualizerStore';
+import { generateNumericArray } from '../utils';
+import { useStore } from '../store/visualizerStore';
 
 /**
  * The material to use for all frequency lines.

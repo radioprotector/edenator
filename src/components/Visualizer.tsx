@@ -2,7 +2,7 @@ import { RefObject, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 
-import { useStore } from './visualizerStore';
+import { useStore } from '../store/visualizerStore';
 
 import BassTunnel from './BassTunnel';
 import BeatQueue from './BeatQueue';

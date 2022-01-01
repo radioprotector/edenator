@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { css } from "styled-components";
 
-import { useStore } from './visualizerStore';
+import { useStore } from '../store/visualizerStore';
 
 /**
  * A path for a round-rect background to use for dynamic icon generation.

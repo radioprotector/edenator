@@ -2,7 +2,7 @@ import create, { GetState, SetState } from 'zustand';
 import { StoreApiWithSubscribeWithSelector, subscribeWithSelector } from 'zustand/middleware'
 
 import { EmptyTrackAnalysis, TrackAnalysis } from './TrackAnalysis';
-import { defaultTheme, Theme } from './Themes';
+import { defaultTheme, Theme } from './themes';
 
 interface VisualizerState {
   /**
