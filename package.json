@@ -2,7 +2,7 @@
   "name": "edenator",
   "version": "0.1.0",
   "description": "A browser-based music visualizer",
-  "homepage": "https://github.com/radioprotector/edenator#readme",
+  "homepage": "https://github.com/radioprotector/edenator",
   "bugs": "https://github.com/radioprotector/edenator/issues",
   "author": "Cate Stock <radioprotector@users.noreply.github.com>",
   "license": "MIT",
