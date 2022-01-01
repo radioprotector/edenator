@@ -124,6 +124,9 @@ const KEY_CONVERSION_CHART: { [key: string]: OpenKey } = {
   'O': OpenKey.OffKey
 };
 
+/**
+ * Describes the parameters to use for a specific song peak analysis pass.
+ */
 interface PeakAnalysisArgs {
   minFrequency: number | null;
   
@@ -215,6 +218,11 @@ function findTagValue(tagCollection: TagType, standardTags: string[] | null, cus
   return null;
 }
 
+/**
+ * Attempts to retrieve the BPM of the track as stored in its metadata tags.
+ * @param tagCollection The collection of tags to search.
+ * @returns The fractional BPM, if found; otherwise, null.
+ */
 function getBpmTagValue(tagCollection: TagType): number | null {
   // Look for, in order of preference: BPM, TBPM, TMPO
   // In addition, we want to support fBPM as set by programs like Traktor
@@ -242,6 +250,11 @@ function getBpmTagValue(tagCollection: TagType): number | null {
   }
 }
 
+/**
+ * Attempts to retrieve the key of the track as stored in its metadata tags.
+ * @param tagCollection The collection of tags to search.
+ * @returns The OpenKey representation of the key, if found; otherwise, null.
+ */
 function getKeyTagValue(tagCollection: TagType): OpenKey | null {
   let keyTag = findTagValue(tagCollection, ['KEY', 'TKEY'], ['INITIAL KEY', 'INITIAL_KEY']);
   let keyValue: string = '';
@@ -252,6 +265,9 @@ function getKeyTagValue(tagCollection: TagType): OpenKey | null {
   else {
     keyValue = keyTag.data.toString();
   }
+
+  // Remove spaces
+  keyValue = keyValue.replace(/ /, '');
 
   // Convert appropriate values to open key notation
   if (keyValue in KEY_CONVERSION_CHART) {
@@ -270,6 +286,11 @@ function getKeyTagValue(tagCollection: TagType): OpenKey | null {
   }
 }
 
+/**
+ * Gets the track volume for the specified audio data.
+ * @param audioData The raw encoded audio data.
+ * @returns A promise for the equivalent mono track volume, smoothed and sampled at periodic 
+ */
 function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
   // For processing, downmix to mono
   // HACK: We need to use one audio context just so we can decode the audio (and get the correct buffer length)
@@ -330,6 +351,13 @@ function getTrackVolume(audioData: ArrayBuffer): Promise<Float32Array> {
   });
 }
 
+/**
+ * Gets peaks from the provided audio data that meet the specified criteria.
+ * @param audioData The raw encoded audio data.
+ * @param overallVolume The mono volume progression for the entire track.
+ * @param analysisArgs The parameters to use for the analysis.
+ * @returns A promise for the relevant peak collection.
+ */
 function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisArgs: PeakAnalysisArgs): Promise<Peak[]> {
   // For processing, downmix to mono
   // XXX: Look at getting webkitOfflineAudioContext supported as well
@@ -478,6 +506,96 @@ function getPeaks(audioData: ArrayBuffer, overallVolume: Float32Array, analysisA
     });
 }
 
+/**
+ * Attempts to detect the BPM from the provided collection of peaks.
+ * @param beats The collection of beats that are used to determine the peaks.
+ * @param trackLength The length of the track, in seconds.
+ * @returns The resulting BPM, if successfully detected; otherwise, null.
+ */
+function getBpmFromPeaks(beats: Peak[], trackLength: number) : number | null {
+  if (!beats) {
+    return null;
+  }
+
+  // If we don't have many beats (assume we want probably 45 per minute) also exit out
+  const minimumBeats = 45 * (trackLength / 60);
+
+  if (beats.length < minimumBeats) {
+    return null;
+  }
+
+  // Generate a histogram of the average distance between beats
+  const intervalHistogram: { [roundedInterval: string]: number } = {};
+
+  beats.forEach((beat, index) => {
+    for(let relativeIndex = 1; relativeIndex < 9; relativeIndex++) {
+      // Make sure we don't skip too far out
+      if (index + relativeIndex >= beats.length) {
+        break;
+      }
+
+      // Instead of counting all beats equally, count ones with more intensity
+      const interval = beats[index + relativeIndex].time - beat.time;
+      const roundedInterval = interval.toFixed(2);
+      const averageIntensity = (beats[index + relativeIndex].intensityNormalized + beat.intensityNormalized) / 2;
+
+      if (roundedInterval in intervalHistogram) {
+        intervalHistogram[roundedInterval] += averageIntensity;
+      }
+      else {
+        intervalHistogram[roundedInterval] = averageIntensity;
+      }
+    }
+  });
+
+  // Map that to an equivalent tempo histogram
+  const tempoHistogram: { [roundedTempo: string]: number } = {};
+
+  Object.keys(intervalHistogram).forEach((roundedInterval) => {
+    const intervalFloat = parseFloat(roundedInterval);
+    let tempoForInterval = 60 / (intervalFloat / ANALYZER_SAMPLE_RATE);
+
+    // Adjust to fit within the typical range of 90-180 BPM
+    while (tempoForInterval < 90) {
+      tempoForInterval *= 2;
+    }
+
+    while (tempoForInterval > 180) {
+      tempoForInterval /= 2;
+    }
+
+    // Round the tempo and add all of its intervals
+    const roundedTempoForInterval = tempoForInterval.toFixed(1);
+
+    if (roundedTempoForInterval in tempoHistogram) {
+      tempoHistogram[roundedTempoForInterval] += intervalHistogram[roundedInterval];
+    }
+    else {
+      tempoHistogram[roundedTempoForInterval] = intervalHistogram[roundedInterval];
+    }
+  });
+
+  // Now get the assumed maximum
+  let maximumTempo = 0.0;
+  let maximumIntervals = 0;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug(`histogram for BPM detection`, tempoHistogram);
+  }
+
+  Object.keys(tempoHistogram).forEach((roundedTempo) => {
+    const tempoFloat = parseFloat(roundedTempo);
+    const intervals = tempoHistogram[roundedTempo];
+
+    if (intervals > maximumIntervals) {
+      maximumTempo = tempoFloat;
+      maximumIntervals = intervals;
+    }
+  });
+
+  return maximumTempo;
+}
+
 export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
   let tags: TagType;
 
@@ -533,13 +651,27 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
   return Promise.all([tags, subBass, bass, beat, treble])
     .then((values): TrackAnalysis => {
       const [tagResult, subBassResult, bassResult, beatResult, trebleResult] = values;
-      const bpmFromTags = getBpmTagValue(tagResult);
+      const trackLength = overallVolume.length / ANALYZER_SAMPLE_RATE;
       const keyFromTags = getKeyTagValue(tagResult);
+
+      let detectedBpm = getBpmTagValue(tagResult);
+
+      // Attempt to detect the BPM from the peaks if either:
+      // 1) We couldn't find it in tags
+      // 2) We're in development (so we can compare results easily)
+      if (!detectedBpm) {
+        detectedBpm = getBpmFromPeaks(beatResult, trackLength);
+      }
+      else if (process.env.NODE_ENV !== 'production') {
+        let bpmFromPeaks = getBpmFromPeaks(beatResult, trackLength);
+        console.debug(`tag BPM: ${detectedBpm} versus peak BPM: ${bpmFromPeaks}`);
+      }
 
       const analysis = new TrackAnalysis()
       analysis.title = tagResult.tags.title ?? 'Unknown Title';
       analysis.artist = tagResult.tags.artist ?? 'Unknown Artist';
-      analysis.bpm = bpmFromTags ?? 120;
+      analysis.bpm = detectedBpm ?? 120;
+      analysis.length = trackLength;
       analysis.key = keyFromTags;
       analysis.subBass = subBassResult;
       analysis.bass = bassResult;

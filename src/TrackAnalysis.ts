@@ -63,6 +63,11 @@ export class TrackAnalysis
   }
 
   /**
+   * The length of the song, in seconds.
+   */
+  public length: number = 0;
+
+  /**
    * The key that was detected for the track, or null if not detected.
    */
   public key: OpenKey | null = null;
