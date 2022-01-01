@@ -2,7 +2,7 @@
   "name": "edenator",
   "version": "0.1.0",
   "description": "A browser-based music visualizer",
-  "homepage": ".",
+  "homepage": "https://radioprotector.github.io/edenator",
   "bugs": "https://github.com/radioprotector/edenator/issues",
   "author": "Cate Stock <radioprotector@users.noreply.github.com>",
   "license": "MIT",
@@ -22,6 +22,7 @@
     "@types/node": "^12.20.37",
     "@types/react": "^17.0.37",
     "@types/react-dom": "^17.0.11",
+    "env-cmd": "^10.1.0",
     "jsmediatags": "^3.9.3",
     "postprocessing": "^6.23.3",
     "react": "^17.0.2",
@@ -36,7 +37,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "prodstart": "react-scripts build && npx serve -s build -l 4000 -n",
+    "start:prod": "env-cmd -f .env.prodlocal react-scripts build && npx serve -s build -l 4000 -n",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

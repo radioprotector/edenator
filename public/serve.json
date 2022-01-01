@@ -1,7 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/radioprotector/edenator/static/:path+", "destination": "/static/:path" },
-    { "source": "/radioprotector/edenator/textures/:path+", "destination": "/textures/:path" },
-    { "source": "/radioprotector/edenator/backgrounds/:path+", "destination": "/backgrounds/:path" }
-  ]
-}
