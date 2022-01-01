@@ -192,11 +192,16 @@ function App(): JSX.Element {
           Edenator
         </h1>
         <p>
-          Start by choosing a song.
+          An in-browser audio visualizer.
+          Start by choosing a track.
         </p>
         <p>
           <strong><em>The visuals used by this application may not be suitable for
           people with photosensitive epilepsy.</em></strong>
+        </p>
+        <p>
+          This visualizer requires support for WebGL 2.0 and the Web Audio API.
+          All audio processing is performed in-browser and is not uploaded.
         </p>
       </div>
       <div
