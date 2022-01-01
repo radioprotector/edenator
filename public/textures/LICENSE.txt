@@ -1,0 +1,5 @@
+The following textures are CC0 (Public Domain Donation) by hackcraft.de and sourced from https://opengameart.org/content/lens-flares-and-particles:
+- corona.png
+- extendring.png
+- ring.png
+- wavering.png
