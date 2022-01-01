@@ -30,9 +30,6 @@ function App(): JSX.Element {
   const audioPlayerElement = useRef<HTMLAudioElement | null>(null);
   const audioAnalyser = useRef<AnalyserNode | null>(null);
 
-  // Use this to track setInterval attempts to autoplay
-  const autoplayIntervalAttempt = useRef<number | null>(null);
-
   // Like audioContext, this is a ref so that we can preserve it during Chrome fast-refresh
   const mediaElementSourceNodes = useRef(new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>());
   
@@ -103,35 +100,26 @@ function App(): JSX.Element {
             audioPlayerElement.current.src = newAudioUrl;
             audioPlayerElement.current.load();
 
-            const playPromise = audioPlayerElement.current.play();
-
-            // HACK: Play the audio player in an event loop *after* we've finished handling the file selection.
+            // HACK: As needed, start the audio player in an event loop *after* we've finished handling the file selection.
             // Even though the file selector has been clicked, we're still in the event handler for that
             // so Chrome's auto-play blocking doesn't consider the interaction "complete".
-            if (playPromise !== undefined) {
+            const initialContextPromise = audioContext.current.resume();
+            const initialPlayerPromise = audioPlayerElement.current.play();
 
-              playPromise
+            if (initialContextPromise !== undefined && initialPlayerPromise !== undefined) {
+
+              Promise.all([initialContextPromise, initialPlayerPromise])
                 .then(() => {
-                  // Make sure we clear attempts to autoplay
-                  if (autoplayIntervalAttempt.current !== null) {
-                    window.clearInterval(autoplayIntervalAttempt.current);
-                  }
+                  // We're good!
                 })
-                .catch((error) => {
-                  autoplayIntervalAttempt.current = window.setInterval(() => {
-                    if (audioPlayerElement.current) {
-                      audioPlayerElement.current.play()
-                        .then(() => {
-                          // Stop trying
-                          if (autoplayIntervalAttempt.current !== null) {
-                            window.clearInterval(autoplayIntervalAttempt.current)
-                          }
-                        })
-                        .catch(() => {
-                          // no-op
-                        });
+                .catch(() => {
+                  // We need to wait for the next event loop
+                  window.setTimeout(() => {
+                    if (audioContext.current && audioPlayerElement.current) {
+                      audioContext.current.resume();
+                      audioPlayerElement.current.play();
                     }
-                  }, 100);
+                  });
                 });
             }
           }
