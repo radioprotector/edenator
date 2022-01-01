@@ -23,6 +23,7 @@
     "@types/react": "^17.0.37",
     "@types/react-dom": "^17.0.11",
     "env-cmd": "^10.1.0",
+    "gh-pages": "^3.2.3",
     "jsmediatags": "^3.9.3",
     "postprocessing": "^6.23.3",
     "react": "^17.0.2",
@@ -35,6 +36,8 @@
     "zustand": "^3.6.8"
   },
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "npx gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "start:prod": "env-cmd -f .env.prodlocal react-scripts build && npx serve -s build -l 4000 -n",
