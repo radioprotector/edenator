@@ -172,7 +172,7 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
     },
     treble: {
       spriteColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.65),
-      spriteTexture: 'textures/extendring.png',
+      spriteTexture: process.env.PUBLIC_URL + '/textures/extendring.png',
       lightColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.75),
     },
     frequencyGrid: {

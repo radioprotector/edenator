@@ -36,13 +36,13 @@ const backdropGeometry = new THREE.PlaneGeometry(2048, 2048);
 function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Load background textures
   const textures = useTexture({
-    star_first: 'backgrounds/star-01.png',
-    star_first_glow: 'backgrounds/star-01-glow.png',
-    star_second: 'backgrounds/star-02.png',
-    star_second_glow: 'backgrounds/star-02-glow.png',
-    star_third: 'backgrounds/star-03.png',
-    star_third_glow: 'backgrounds/star-03-glow.png',
-    horizon: 'backgrounds/horizon.png'
+    star_first: process.env.PUBLIC_URL + '/backgrounds/star-01.png',
+    star_first_glow: process.env.PUBLIC_URL + '/backgrounds/star-01-glow.png',
+    star_second: process.env.PUBLIC_URL + '/backgrounds/star-02.png',
+    star_second_glow: process.env.PUBLIC_URL + '/backgrounds/star-02-glow.png',
+    star_third: process.env.PUBLIC_URL + '/backgrounds/star-03.png',
+    star_third_glow: process.env.PUBLIC_URL + '/backgrounds/star-03-glow.png',
+    horizon: process.env.PUBLIC_URL + '/backgrounds/horizon.png'
   });
 
   // The star textures should repeat 4 times
