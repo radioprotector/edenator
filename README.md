@@ -1,46 +1,86 @@
-# Getting Started with Create React App
+# Edenator
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Edenator is a browser-based music visualizer, implemented using the following libraries:
 
-## Available Scripts
+- [React](https://reactjs.org/)
+- [three.js](https://threejs.org/) and corresponding helper libraries:
+  - [react-three-fiber](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction)
+  - [drei](https://docs.pmnd.rs/drei/introduction)
+  - [react-postprocessing](https://docs.pmnd.rs/react-postprocessing/introduction)
+- [zustand](https://docs.pmnd.rs/zustand/introduction)
+- [styled-components](https://styled-components.com/)
+- [jsmediatags](https://github.com/aadsm/jsmediatags)
 
-In the project directory, you can run:
+This project is written in TypeScript and makes use of [the Hooks API](https://reactjs.org/docs/hooks-intro.html). All primary components use the [functional component style](https://reactjs.org/docs/components-and-props.html#function-and-class-components). It was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-### `npm start`
+The Zustand-based store is primarily used to keep track of the current song being played and the theme in use for the visualization.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Visualizing Songs
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+The overall `App` component is responsible for application scaffolding, file and theme selection, and audio playback.
 
-### `npm test`
+The `Visualizer` component is responsible for configuring the [Canvas](https://docs.pmnd.rs/react-three-fiber/api/canvas) that contains all other visualization elements. These child components include:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- `BackgroundManager` displays horizon and starfield backgrounds and "rings" around the central sun. The intensity of these visuals are scaled by the currently-playing audio.
+- `BassTunnel` displays "trench walls" that are scrolled (and randomized) as the song progresses to provide a sense of motion and scaled as **bass/sub-bass peaks** are encountered.
+- `BeatQueue` provides a visual representation of the **beat peaks** in the song.
+- `FrequencyGrid` provides a visual representation of the currently-playing audio and provides a sense of motion.
+- `TrebleQueue` provides a visual representation of the **treble peaks** in the song, using transparent sprites and lighting.
+- `VfxManager` defines post-processing effects, the intensity of which are controlled by the currently-playing audio.
 
-### `npm run build`
+### Common Techniques
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The following processes are common in these visualizations:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- Scanning a collection of peaks and assigning Three.js meshes and objects to them as they are being encountered in the song
+- Cycling an effect over a set number of song measures, using a multiple of `TrackAnalysis.secondsPerMeasure` to determine the time period
+- Scaling the intensity of effects based on [the currently-playing frequency data](https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/getByteFrequencyData)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Theming
 
-### `npm run eject`
+The `Theme` interface describes relevant information for theming a track visualization. There are numerous color-based themes, most of which have been generated using a handful of "seed" colors provided to the `generateThemeForColor` helper method.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+When a theme is selected, it is tracked in the Zustand store and components will pull the relevant information from that centralized store.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+For HTML elements that are influenced by the theme, we use the following approach:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+- Define HTML-related styles as a part of the style interface.
+- Define and use CSS variables in the main stylesheet.
+- Use the `AppStyles` component to generate a `<style>` definition that overrides these variable values based on the current theme.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+The `AppStyles` component is also responsible for dynamically updating the page's `<meta name="theme-color">` tag and application icon based on the theme.
 
-## Learn More
+## Song Analysis
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+While the [Web Audio API's AnalyserNode](https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode) can be used to provide many real-time visualizations, it does not allow for "looking ahead" into the progression of the song. As a result, to have a beat approaching from afar (before it has been played) and only encountering the camera while it is being played requires analysis of the track ahead of time.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+As a result, when a song is selected, it goes through an analysis process which includes:
+
+- Parsing metadata tags to determine the artist, title, BPM (if available), and key (if available)
+- Determining the overall track volume throughout the song
+- Identifying peaks in various frequency ranges that exceed specified absolute and relative (to the overall track volume) thresholds
+
+This process ultimately produces a `TrackAnalysis` object which is used throughout the visualization system.
+
+### Keying
+
+When a key is detected, values are normalized to [Open Key Notation](https://www.beatunes.com/en/open-key-notation.html) whenever possible. These values are mapped to specific color themes when available.
+
+No automated key detection is currently supported. When no key has been provided, the song is assigned a random color theme.
+
+### Peak and BPM Detection
+
+While peak detection will use absolute and relative thresholds for detection, the analyzer will attempt to determine a cutoff point if there are more peaks identified than expected. This is determined by a maximum number of expected peaks per minute, multiplying that by the song duration, and attempting to dynamically trim the quietest peaks to achieve that target number. Peaks are detected in the following ranges:
+
+| Range        | Min Hz  | Max Hz  | Peaks/Min  |
+|--------------|---------|---------|------------|
+| Sub-bass     |      20 |      50 |         60 |
+| Bass         |      50 |      90 |        120 |
+| Beat         |      90 |     200 |        300 |
+| Treble       |    2048 |     n/a |        120 |
+
+In the event a BPM value was not found in the tags, the system will attempt to determine one based on the **Beat** peaks detected above. Automatic detection will tend to produce results in the 90-180 BPM range, and to date appears to be slightly higher than the "normal" BPM of a song. This may be due to the fact that the beat range's parameters are somewhat more oriented towards a visually appealing display rather than pure BPM detection.
+
+### Track Hashing and Randomness
+
+Instances of `TrackAnalysis` contain a `trackHash` field, which is a simple hash to try and uniquely identify a particular file. This is used by the `getTrackRandomInt`, `getTrackSeededRandomInt`, and `getTrackSeededRandomFloat` methods to get "random" results that are ultimately predictable based on the track hash. The goal is to have presentation elements display in a randomized fashion that is ultimately _deterministic for the file_, so that repeated visualizations of the song will display as cohesively as possible.
