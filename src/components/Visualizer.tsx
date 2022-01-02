@@ -8,6 +8,7 @@ import BassTunnel from './BassTunnel';
 import BeatQueue from './BeatQueue';
 import FrequencyGrid from './FrequencyGrid';
 import TrebleQueue from './TrebleQueue';
+import SceneryQueue from './SceneryQueue';
 import BackgroundManager from './BackgroundManager';
 import VfxManager from './VfxManager';
 
@@ -44,6 +45,7 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       <BeatQueue audio={props.audio} />
       <FrequencyGrid audio={props.audio} analyser={props.analyser} />
       <TrebleQueue audio={props.audio} />
+      <SceneryQueue audio={props.audio} />
       <BackgroundManager audio={props.audio} analyser={props.analyser} />
       <VfxManager audio={props.audio} analyser={props.analyser} sunMesh={sunMesh} />
     </Canvas>
