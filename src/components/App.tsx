@@ -8,6 +8,7 @@ import { getNextTheme, getThemeForTrack } from '../store/themes';
 import './App.css';
 import AppStyles from './AppStyles';
 import Visualizer from './Visualizer';
+import ThemeReviewer from './ThemeReviewer';
 
 function App(): JSX.Element {
   // Keep track of what we played last so we can free the object URL when switching tracks
@@ -221,6 +222,7 @@ function App(): JSX.Element {
           type="button"
           ref={dummyFileButtonElement}
           id="dummyFilePicker"
+          className="btn"
           onClick={dummyFilePickerClicked}
         >
           Choose a track
@@ -237,6 +239,7 @@ function App(): JSX.Element {
       <button
         type="button"
         id="themeCycler"
+        className="btn"
         onClick={cycleTheme}
       >
         Switch theme
@@ -255,7 +258,7 @@ function App(): JSX.Element {
           />
         </Suspense>
       </div>
-      {/* Only include stats in development */}
+      {/* Only include stats and theme reviewer in development */}
       {
         process.env.NODE_ENV !== 'production'
         &&
@@ -263,7 +266,12 @@ function App(): JSX.Element {
           showPanel={0}
           className="stats"
         />
-      }   
+      }
+      {
+        process.env.NODE_ENV !== 'production'
+        &&
+        <ThemeReviewer />
+      }
     </div>
   );
 }

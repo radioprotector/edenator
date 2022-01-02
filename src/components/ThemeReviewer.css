@@ -1,0 +1,41 @@
+#themeReviewerToggle {
+  position: fixed;
+  z-index: 25; /* Make this above the reviewer itself */
+  top: 0vh;
+  right: 5vw;
+}
+
+#themeReviewer {
+  display: none;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  color: white;
+  background-color: black;
+  z-index: 20;
+}
+
+table {
+  margin-top: 5vh;
+  box-sizing: content-box;
+  border-collapse: separate;
+  border-spacing: 1rem 0.5rem;
+  border: 0;
+}
+
+table td {
+  border: 0;
+  width: 5vw;
+}
+
+/* Separate each colgroup */
+table thead th[scope="colgroup"] {
+  padding: 0 1rem;
+  border-right: 2rem solid black;
+}
+
+/* Add a CSS class for manually spacing out last "group" cells the same as the colgroups */
+table th.group-end, table td.group-end {
+  border-right: 2rem solid black;
+}

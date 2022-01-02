@@ -130,12 +130,32 @@ function getLumaComponent(floatColor: number): number {
 
 /**
  * Gets the luma value for the specified color.
- * @param color The color .
+ * @param color The color.
  * @returns The corresponding luma value.
  * @see {@link https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef}
  */
 function getLuma(color: THREE.Color): number {
   return (0.2126 * getLumaComponent(color.r)) + (0.7152 * getLumaComponent(color.g)) + (0.0722 * getLumaComponent(color.b));
+}
+
+/**
+ * The threshold against which the color is considered dark enough to support legible white text.
+ * @see {@link https://lesscss.org/functions/#color-operations-contrast}
+ */
+const LIGHT_LUMA_THRESHOLD = 0.43;
+
+/**
+ * Gets a black or white color to contrast against the provided color.
+ * @param color The color to check against.
+ * @returns The equivalent contrasting color.
+ */
+export function getContrast(color: THREE.Color): THREE.Color {
+  if (getLuma(color) < LIGHT_LUMA_THRESHOLD) {
+    return WHITE_COLOR;
+  }
+  else {
+    return BLACK_COLOR;
+  }
 }
 
 function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryColor: THREE.Color, tertiaryColor: THREE.Color | null = null): Theme {
@@ -145,7 +165,6 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
   }
 
   // Determine the UI text color to use
-  const LIGHT_LUMA_THRESHOLD = 0.43;
   let uiTextColor: THREE.Color;
   let uiDisabledBgColor: THREE.Color;
   let uiFocusBgColor: THREE.Color;
@@ -217,7 +236,7 @@ const plasmaPowerSaverTheme = generateThemeForColor('plasma power saver', new TH
 /**
  * An array of all themes that can be assigned randomly by getThemeForTrack.
  */
-const ALL_THEMES = [
+export const ALL_THEMES = [
   defaultTheme,
   magentaTheme,
   indigoTheme,

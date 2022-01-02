@@ -31,7 +31,7 @@ html {
   right: 5vw;
 }
 
-#dummyFilePicker, #themeCycler {
+button.btn {
   display: inline-block;
   padding: 1vh 1vw;
   color: var(--ui-color-text);
@@ -41,15 +41,15 @@ html {
   font-weight: bold;
 }
 
-#dummyFilePicker:disabled, #themeCycler:disabled {
+button.btn:disabled {
   background-color: var(--ui-color-contrast-disabled);
 }
 
-#dummyFilePicker:hover, #themeCycler:hover {
+button.btn:hover {
   box-shadow: 0 0 3px 2px var(--ui-color-border);
 }
 
-#dummyFilePicker:focus, #themeCycler:focus {
+button.btn:focus {
   outline: 1px dotted var(--ui-color-border);
   text-decoration: underline;
   background-color: var(--ui-color-contrast-focus);
