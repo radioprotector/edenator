@@ -10,9 +10,13 @@ import AppStyles from './AppStyles';
 import Visualizer from './Visualizer';
 import ThemeReviewer from './ThemeReviewer';
 
+function isSafari(): boolean {
+  return navigator.userAgent.indexOf('AppleWebKit') > -1 && navigator.userAgent.indexOf('Chrome') === -1;
+}
+
 function getAllowedAudioFileTypes(): string {
   // Work around Webkit bug https://bugs.webkit.org/show_bug.cgi?id=34442
-  if (navigator.userAgent.indexOf('AppleWebKit') > -1) {
+  if (isSafari()) {
     return '.mp3,.m4a,.ogg,.aac,.flac';
   }
   else {
@@ -73,6 +77,19 @@ function App(): JSX.Element {
   );
 
   const dummyFilePickerClicked = () => {
+    // HACK: Work around Mobile Safari autoplay limitations:
+    // http://www.schillmania.com/projects/soundmanager2/doc/technotes/#mobile-device-limitations
+    // If we have an audio player but haven't wired up a source yet, set one and load
+    if (isSafari() && audioContext.current && audioPlayerElement.current && !audioPlayerElement.current.src) {
+      try {
+        audioContext.current.resume();
+        audioPlayerElement.current.play();
+      }
+      catch {
+      }
+    }
+
+    // Now open the file picker
     sourceFileElement.current.click();
   };
 
