@@ -6,56 +6,71 @@ import { useStore } from '../store/visualizerStore';
 import { generateNumericArray } from '../utils';
 import Lull from '../store/Lull';
 
+const BASE_RADIUS = 150;
 const EMPTY_VECTOR = new THREE.Vector3(0, 0, 0);
 const NO_ROTATION = new THREE.Quaternion();
+const FLIP_VERTICAL = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
+const ROTATE_90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
 const NO_SCALE = new THREE.Vector3().setScalar(1);
 
 /**
- * The collection of geometries that can be used for scenery.
+ * The collection of geometries that can be used for scenery and the transformation matrices to use for them.
  */
-const SCENERY_GEOMETRIES: THREE.BufferGeometry[] = [
-  new THREE.ConeGeometry(15, 30),
-  new THREE.SphereGeometry(15, undefined, undefined, undefined, undefined, 0, Math.PI / 2),
-  new THREE.LatheGeometry(
-    [new THREE.Vector2(0.25, 0.5), new THREE.Vector2(0.5, 0.7), new THREE.Vector2(0.75, 0.9)]
-  ),
-  new THREE.BoxGeometry(20, 20, 20)
-];
-
-/**
- * The transformations to apply to the respective scenery geometries.
- */
-const SCENERY_TRANSFORMS: THREE.Matrix4[] = [
-  new THREE.Matrix4().compose(new THREE.Vector3(0, 0, 0), NO_ROTATION, NO_SCALE),
-  new THREE.Matrix4().compose(new THREE.Vector3(10, -20, 0), NO_ROTATION, NO_SCALE),
-  new THREE.Matrix4().compose(new THREE.Vector3(0, 20, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0)), new THREE.Vector3(25, 50, 25)),
-  new THREE.Matrix4().compose(new THREE.Vector3(0, -10, 0), NO_ROTATION, NO_SCALE)
+const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Matrix4][] = [
+  [
+    new THREE.ConeGeometry(BASE_RADIUS, BASE_RADIUS * 2, undefined, undefined, true),
+    new THREE.Matrix4().compose(EMPTY_VECTOR, NO_ROTATION, NO_SCALE)
+  ],
+  [
+    // The top half of a sphere - make sure we move it down so it's flush
+    new THREE.SphereGeometry(BASE_RADIUS, undefined, undefined, undefined, undefined, 0, Math.PI / 2),
+    new THREE.Matrix4().compose(new THREE.Vector3(0, -BASE_RADIUS/2, 0), NO_ROTATION, NO_SCALE)
+  ],
+  // [
+  //   // This is tricky to get right - holding off for now
+  //   new THREE.LatheGeometry(
+  //     [new THREE.Vector2(0.1, 1), new THREE.Vector2(0.2, 0.95), new THREE.Vector2(0.3, 0.9), new THREE.Vector2(0.5, 0.6), new THREE.Vector2(0.6, 0.1), new THREE.Vector2(0.65, 0)]
+  //   ),
+  //   new THREE.Matrix4().compose(new THREE.Vector3(0, -BASE_RADIUS, 0), NO_ROTATION, new THREE.Vector3(BASE_RADIUS, BASE_RADIUS, BASE_RADIUS))
+  // ],
+  [
+    new THREE.BoxGeometry(BASE_RADIUS, BASE_RADIUS * 5, BASE_RADIUS),
+    new THREE.Matrix4().compose(EMPTY_VECTOR, NO_ROTATION, NO_SCALE)
+  ],
+  [
+    new THREE.TorusGeometry(BASE_RADIUS, BASE_RADIUS / 2, undefined, undefined, Math.PI),
+    new THREE.Matrix4().compose(new THREE.Vector3(0, -BASE_RADIUS/2, 0), ROTATE_90, NO_SCALE)
+  ],
+  [
+    new THREE.CylinderGeometry(BASE_RADIUS, BASE_RADIUS, BASE_RADIUS * 5, undefined, undefined, true),
+    new THREE.Matrix4().compose(EMPTY_VECTOR, NO_ROTATION, NO_SCALE)
+  ]
 ];
 
 /**
  * The material to use for all scenery.
  */
-const sceneryMaterial = new THREE.MeshPhongMaterial({ shininess: 1.0 });
+const sceneryMaterial = new THREE.MeshStandardMaterial({ fog: true });
 
 function SceneryQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedLullIndex = 0;
   let nextAvailableMeshIndex = 0;
   const availableSceneryMeshesRing = useRef<THREE.Mesh[]>([]);
   const QUEUE_SIZE = 20;
-  const SCENERY_DEPTH_START = -300;
-  const SCENERY_DEPTH_END = 10;
-  const HORIZ_OFFSET = 50;
-  const VERT_OFFSET = 0;
+  const SCENERY_DEPTH_START = -1000;
+  const SCENERY_DEPTH_END = 0;
+  const HORIZ_OFFSET = BASE_RADIUS * 2;
+  const VERT_OFFSET = -10;
 
   const trackAnalysis = useStore(state => state.analysis);
 
   // Make the lookahead and decay periods variable based on measure lengths
   const lookaheadPeriod = useMemo(() => {
-    return trackAnalysis.secondsPerMeasure * 3;
+    return trackAnalysis.secondsPerMeasure * 2;
   }, [trackAnalysis]);
 
   const decayPeriod = useMemo(() => {
-    return trackAnalysis.secondsPerMeasure * 0.5;
+    return trackAnalysis.secondsPerMeasure * 0.25;
   }, [trackAnalysis])
 
   // Generate available sprites for use in a ring buffer
@@ -71,12 +86,12 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Elemen
     });
 
   // Because the scenery material is cached across multiple renders, just ensure the color reflects the state.
-  sceneryMaterial.color = useStore().theme.frequencyGrid.lineColor;
+  sceneryMaterial.color = useStore().theme.beat.color;
 
   useEffect(() => useStore.subscribe(
-    state => state.theme.frequencyGrid.lineColor,
-    (newLineColor) => {
-      sceneryMaterial.color = newLineColor;
+    state => state.theme.beat.color,
+    (newColor) => {
+      sceneryMaterial.color = newColor;
     }),
     []);
 
@@ -122,13 +137,13 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Elemen
 
       // Randomize the geometry to use for the mesh
       const geometryIndex = trackAnalysis.getTrackSeededRandomInt(0, SCENERY_GEOMETRIES.length - 1, curLull.time);
-      meshForLull.geometry = SCENERY_GEOMETRIES[geometryIndex];
+      meshForLull.geometry = SCENERY_GEOMETRIES[geometryIndex][0];
 
       // Pull geometry-specific translation information
       const geometryPosition = new THREE.Vector3();
       const geometryRotation = new THREE.Quaternion();
       const geometryScale = new THREE.Vector3();
-      SCENERY_TRANSFORMS[geometryIndex].decompose(geometryPosition, geometryRotation, geometryScale);
+      SCENERY_GEOMETRIES[geometryIndex][1].decompose(geometryPosition, geometryRotation, geometryScale);
 
       // Randomize whether it's on the left or right and apply the geometry-specific offset in the same direction
       if (trackAnalysis.getTrackSeededRandomInt(0, 1, curLull.time) === 0) {
