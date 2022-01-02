@@ -1,4 +1,5 @@
 import Peak from "./Peak";
+import Lull from "./Lull";
 
 /**
  * The different key values that are supported
@@ -79,6 +80,11 @@ export class TrackAnalysis
   public beat: Peak[] = [];
 
   public treble: Peak[] = [];
+
+  /**
+   * The lulls in the song.
+   */
+  public lulls: Lull[] = [];
 
   /**
    * The hash to identify the track. This is not guaranteed to be unique, but is

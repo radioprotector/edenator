@@ -1,6 +1,8 @@
 import { Reader } from "jsmediatags";
 import { FrameType, TagType } from "jsmediatags/types";
+
 import Peak from "./Peak";
+import Lull from "./Lull";
 import { OpenKey, TrackAnalysis } from "./TrackAnalysis";
 
 const ANALYZER_SAMPLE_RATE = 44100;
@@ -649,6 +651,152 @@ function getBpmFromPeaks(beats: Peak[], trackLength: number) : number | null {
   return averageTempo;
 }
 
+/**
+ * Attempts to insert the specified lull into the sorted array while preserving sort order
+ * and maximum array size constraints.
+ * @param targetArray The array of lulls, sorted from longest to shortest.
+ * @param maxArrayLength The maximum array length to maintain.
+ * @param newItem The new item to attempt to insert.
+ * @returns True if the item was successfully inserted; otherwise, false.
+ */
+function tryInsertSortedLull(targetArray: Lull[], maxArrayLength: number, newItem: Lull): boolean {
+  // This array should be sorted from longest to shortest.
+  for(let targetIndex = 0; targetIndex < targetArray.length; targetIndex++) {
+    const currentItem = targetArray[targetIndex];
+
+    // This new item should precede the current item, so insert it at the current item's position
+    if (currentItem.duration < newItem.duration) {
+      targetArray.splice(targetIndex, 0, newItem);
+
+      // Trim off the last element of the array if we're over-length
+      if (targetArray.length > maxArrayLength) {
+        targetArray.pop();
+        return true;
+      }
+    }
+  }
+
+  // We didn't find anything smaller than our source item, but we can still append if we don't have enough items
+  if (targetArray.length < maxArrayLength) {
+    targetArray.push(newItem);
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+/**
+ * Finds the location of the nearest peak across a collection of peak arrays.
+ * @param peakArrays The collection of peak arrays to search.
+ * @param nextPeakIndices The collection of next indices to check in the respective peak arrays.
+ * @returns Information about where the nearest peak may be located, or an object with -1 indices when there are no peaks remaining.
+ */
+function findNearestPeak(peakArrays: Peak[][], nextPeakIndices: number[]): { arrayIndex: number, peakIndex: number } {
+  let minimumTime = Number.MAX_SAFE_INTEGER;
+  let minimumArrayIndex = -1;
+  let minimumPeakIndex = -1;
+
+  for(let arrayIndex = 0; arrayIndex < peakArrays.length; arrayIndex++) {
+    const peakArrayToScan = peakArrays[arrayIndex];
+    const nextPeakIndex = nextPeakIndices[arrayIndex];
+
+    // If this array doesn't have any more elements, skip over it
+    if (nextPeakIndex >= peakArrayToScan.length) {
+      continue;
+    }
+
+    // See if this comes before our current minimum - if so, update 
+    const peakAtIndex = peakArrayToScan[nextPeakIndex];
+
+    if (peakAtIndex.time < minimumTime) {
+      minimumTime = peakAtIndex.time;
+      minimumArrayIndex = arrayIndex;
+      minimumPeakIndex = nextPeakIndex;
+    }
+  }
+  
+  return {
+    arrayIndex: minimumArrayIndex,
+    peakIndex: minimumPeakIndex
+  }
+}
+
+function findLulls(trackLength: number, expectedLulls: number, peakArrays: Peak[][]): Lull[] {
+  if (expectedLulls <= 0 || peakArrays.length <= 0) {
+    return [];
+  }
+
+  // Filter out empty arrays
+  peakArrays = peakArrays.filter((peakArray) => peakArray.length > 0);
+
+  // Now build an array of the next element to look for in each array
+  const nextPeakIndices: number[] = peakArrays.map(() => 0);
+
+  // We want to track the longest lulls available
+  let sortedLongestLulls: Lull[] = [];
+  let minimumLullDuration = 0.0;
+  let startOfCurrentPeriod = 0.0;
+
+  while(true) {
+    // Get the nearest peak
+    const nearestPeakLocation = findNearestPeak(peakArrays, nextPeakIndices);
+
+    // See if we ran out of arrays to scan
+    if (nearestPeakLocation.arrayIndex === -1) {
+      // Create an ending lull that goes to the end of the track
+      const endingLull: Lull = {
+        time: startOfCurrentPeriod,
+        duration: trackLength - startOfCurrentPeriod
+      };
+
+      // See if that's sufficient
+      if (endingLull.duration > minimumLullDuration) {
+        tryInsertSortedLull(sortedLongestLulls, expectedLulls, endingLull);
+      }
+
+      // Exit out since we have nothing left to scan
+      break;
+    }
+
+    // Ensure we increment the next peak index for the source array
+    nextPeakIndices[nearestPeakLocation.arrayIndex]++;
+
+    // Now pull what we just found.
+    // If it's in the past, skip over it and keep searching.
+    const nearestPeak = peakArrays[nearestPeakLocation.arrayIndex][nearestPeakLocation.peakIndex];
+
+    if (nearestPeak.time <= startOfCurrentPeriod) {
+      continue;
+    }
+
+    // Create a new lull ranging from our starting point up to this peak
+    const newLull: Lull = {
+      time: startOfCurrentPeriod,
+      duration: nearestPeak.time - startOfCurrentPeriod
+    };
+
+    // See if we can insert this
+    // Use the minimumLullDuration as an optimization before actually comparing against array elements
+    if (newLull.duration > minimumLullDuration && tryInsertSortedLull(sortedLongestLulls, expectedLulls, newLull)) {
+      
+      // We successfully inserted.
+      // If we're at the maximum array length, ensure the minimum duration is up-to-date.
+      if (sortedLongestLulls.length >= expectedLulls) {
+        minimumLullDuration = sortedLongestLulls[sortedLongestLulls.length - 1].duration;
+      }
+    }
+
+    // Now move the start of the next period to the end of the peak
+    startOfCurrentPeriod = nearestPeak.end;
+  }
+
+  // Sort the lulls by time
+  return sortedLongestLulls.sort((a, b) => {
+    return a.time - b.time;
+  })
+}
+
 export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
   let tags: TagType;
 
@@ -730,6 +878,7 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
       analysis.bass = bassResult;
       analysis.beat = beatResult;
       analysis.treble = trebleResult;
+      analysis.lulls = findLulls(trackLength, Math.floor((trackLength / 60) * 6), [beatResult, trebleResult])
       analysis.trackHash = Math.floor(file.lastModified + file.size) + 1;
 
       return analysis;
