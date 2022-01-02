@@ -45,7 +45,7 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       <BeatQueue audio={props.audio} />
       <FrequencyGrid audio={props.audio} analyser={props.analyser} />
       <TrebleQueue audio={props.audio} />
-      <SceneryQueue audio={props.audio} />
+      <SceneryQueue audio={props.audio} analyser={props.analyser} />
       <BackgroundManager audio={props.audio} analyser={props.analyser} />
       <VfxManager audio={props.audio} analyser={props.analyser} sunMesh={sunMesh} />
     </Canvas>

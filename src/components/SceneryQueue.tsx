@@ -9,7 +9,7 @@ import Lull from '../store/Lull';
 const BASE_RADIUS = 150;
 const EMPTY_VECTOR = new THREE.Vector3(0, 0, 0);
 const NO_ROTATION = new THREE.Quaternion();
-const FLIP_VERTICAL = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
+// const FLIP_VERTICAL = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
 const ROTATE_90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
 const NO_SCALE = new THREE.Vector3().setScalar(1);
 
@@ -52,7 +52,7 @@ const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Matrix4][] = [
  */
 const sceneryMaterial = new THREE.MeshStandardMaterial({ fog: true });
 
-function SceneryQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
+function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   let nextUnrenderedLullIndex = 0;
   let nextAvailableMeshIndex = 0;
   const availableSceneryMeshesRing = useRef<THREE.Mesh[]>([]);
@@ -159,6 +159,9 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Elemen
       // Copy over the scale and rotation wholesale
       meshForLull.scale.copy(geometryScale);
       meshForLull.rotation.setFromQuaternion(geometryRotation);
+
+      // Also store the original scale
+      meshForLull.userData['originalScale'] = geometryScale;
       
       // Switch around to the next item in the ring buffer
       nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableSceneryMeshesRing.current.length;
@@ -167,11 +170,29 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Elemen
       nextUnrenderedLullIndex++;
     }
 
+    // Calculate audio-based scaling factors
+    let verticalScalingFactor = 0.0;
+    let widthAndDepthScalingFactor = 0.0;
+
+    if (props.audio.current.currentTime > 0 && props.analyser.current != null) {
+      const frequencies = new Uint8Array(props.analyser.current.frequencyBinCount);
+      props.analyser.current.getByteFrequencyData(frequencies);
+
+      if (Number.isFinite(frequencies[7])) {
+        verticalScalingFactor = (frequencies[7] / 255.0) / 2;
+      }
+
+      if (Number.isFinite(frequencies[23])) {
+        widthAndDepthScalingFactor = (frequencies[23] / 255.0) / 10;
+      }
+    }
+
     // Now update the items in the ring buffer
     for (let itemIdx = 0; itemIdx < availableSceneryMeshesRing.current.length; itemIdx++)
     {
       const meshForLull = availableSceneryMeshesRing.current[itemIdx];
       const lullData = meshForLull.userData['lull'] as Lull;
+      const originalScale = meshForLull.userData['originalScale'] as THREE.Vector3;
 
       if (lullData === null || lullData === undefined) {
         meshForLull.visible = false;
@@ -191,6 +212,19 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Elemen
       // Make the mesh visible and lerp it to zoom in
       meshForLull.visible = true;
       meshForLull.position.z = THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullDisplayEnd, SCENERY_DEPTH_START, SCENERY_DEPTH_END);
+
+      // Scale the mesh based on audio data, but apply easing factors in either direction to minimize suddenness
+      const easedDownXScale = meshForLull.scale.x * 0.995;
+      const easedDownYScale = meshForLull.scale.y * 0.995;
+      const easedDownZScale = meshForLull.scale.z * 0.995;
+      const easedUpXScale = meshForLull.scale.x * 1.005;
+      const easedUpYScale = meshForLull.scale.y * 1.005;
+      const easedUpZScale = meshForLull.scale.z * 1.005;
+
+      meshForLull.scale.set(
+        Math.max(easedDownXScale, Math.min(easedUpXScale, originalScale.x * (1.0 + widthAndDepthScalingFactor))),
+        Math.max(easedDownYScale, Math.min(easedUpYScale, originalScale.y * (1.0 + verticalScalingFactor))),
+        Math.max(easedDownZScale, Math.min(easedUpZScale, originalScale.z * (1.0 + widthAndDepthScalingFactor))));
     }
   });
 
