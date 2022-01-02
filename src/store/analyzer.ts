@@ -652,8 +652,8 @@ function getBpmFromPeaks(beats: Peak[], trackLength: number) : number | null {
 }
 
 /**
- * Attempts to insert the specified lull into the sorted array while preserving sort order
- * and maximum array size constraints.
+ * Attempts to insert the specified lull into the sorted array
+ * while preserving sort order and maximum array size constraints.
  * @param targetArray The array of lulls, sorted from longest to shortest.
  * @param maxArrayLength The maximum array length to maintain.
  * @param newItem The new item to attempt to insert.
@@ -727,10 +727,10 @@ function findNearestActivity(activityArrays: (Peak | Lull)[][], nextActivityIndi
 /**
  * Finds lulls in the track between the specified collection of activities.
  * @param trackLength The length of the track, in fractional seconds.
- * @param maximumLulls The maximum number of lulls that can be returned.
+ * @param maximumLulls The maximum number of lulls that can be found.
  * @param shortestDuration The shortest allowable duration of lull.
- * @param activityArrays The activities to skip over when determining lulls. 
- * @returns 
+ * @param activityArrays The activities to skip over when determining lulls. Each should be sorted in time-ascending order.
+ * @returns The resulting collection of lulls.
  */
 function findLulls(trackLength: number, maximumLulls: number, shortestDuration: number, activityArrays: (Peak | Lull)[][]): Lull[] {
   if (maximumLulls <= 0 || activityArrays.length <= 0) {
@@ -738,6 +738,8 @@ function findLulls(trackLength: number, maximumLulls: number, shortestDuration: 
   }
 
   // Filter out empty arrays
+  // We want to keep processing even if *this* filtered length is 0, because that way we'll get a lull
+  // ranging from 0 to the end of the song.
   activityArrays = activityArrays.filter((activityArrays) => activityArrays.length > 0);
 
   // Now build an array of the next element to look for in each array
@@ -813,6 +815,60 @@ function findLulls(trackLength: number, maximumLulls: number, shortestDuration: 
 
   // Sort the lulls by time
   return sortedLongestLulls.sort((a, b) => {
+    return a.time - b.time;
+  });
+}
+
+/**
+ * Subdivides long lulls in the provided collection until the maximum number of lulls
+ * has been encountered or the lull durations are relatively homogenous.
+ * @param lulls The collection of lulls to update. This array will be modified in-place.
+ * @param maximumLulls The maximum number of lulls that can be found.
+ */
+function subdivideLongLulls(lulls: Lull[], maximumLulls: number): void {
+  if (lulls.length === 0 || lulls.length >= maximumLulls) {
+    return;
+  }
+
+  // First sort by duration descending
+  lulls.sort((a, b) => {
+    return b.duration - a.duration;
+  });
+
+  // We will keep subdividing until:
+  // 1) We have enough lulls
+  // 2) The shortest lull is more than half of the longest one, ensuring the collection is roughly homogenous
+  const MINIMUM_DISCREPANCY = 2;
+
+  while(lulls.length < maximumLulls && (lulls[0].duration / MINIMUM_DISCREPANCY) > lulls[lulls.length - 1].duration) {
+    // Subdivide the longest lull
+    const lullToSplit = lulls.shift()!;
+    const newDuration = lullToSplit.duration / 2;
+    const midpoint = lullToSplit.time + newDuration;
+
+    // if (process.env.NODE_ENV !== 'production') {
+    //   console.debug(`splitting lull from ${lullToSplit.time} to ${lullToSplit.end} at ${midpoint}`);
+    // }
+
+    const firstLull: Lull = {
+      time: lullToSplit.time,
+      end: midpoint,
+      duration: newDuration
+    };
+
+    const secondLull: Lull = {
+      time: midpoint,
+      end: lullToSplit.end,
+      duration: newDuration
+    };
+
+    // Try to insert both
+    tryInsertSortedLull(lulls, maximumLulls, firstLull);
+    tryInsertSortedLull(lulls, maximumLulls, secondLull);
+  }
+
+  // Re-sort the lulls by time ascending
+  lulls.sort((a, b) => {
     return a.time - b.time;
   });
 }
@@ -901,7 +957,7 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
       analysis.trackHash = Math.floor(file.lastModified + file.size) + 1;
 
       // Calculate lulls last since that depends on other analysis components
-      const maxLullsForTrack = Math.floor((trackLength / 60) * 6);
+      const maxLullsForTrack = Math.floor((trackLength / 60) * 12);
       const minLullDuration = analysis.secondsPerMeasure;
 
       analysis.lulls = findLulls(trackLength, maxLullsForTrack, minLullDuration, [beatResult, trebleResult]);
@@ -915,6 +971,9 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
         analysis.lulls.sort((a, b) => {
           return a.time - b.time;
         });
+
+        // Try to subdivide long lulls
+        subdivideLongLulls(analysis.lulls, maxLullsForTrack);
       }
 
       return analysis;
