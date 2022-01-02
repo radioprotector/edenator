@@ -689,109 +689,121 @@ function tryInsertSortedLull(targetArray: Lull[], maxArrayLength: number, newIte
 }
 
 /**
- * Finds the location of the nearest peak across a collection of peak arrays.
- * @param peakArrays The collection of peak arrays to search.
- * @param nextPeakIndices The collection of next indices to check in the respective peak arrays.
- * @returns Information about where the nearest peak may be located, or an object with -1 indices when there are no peaks remaining.
+ * Finds the location of the nearest activity across a collection of activity arrays.
+ * @param activityArrays The collection of activity arrays to search.
+ * @param nextActivityIndices The collection of next indices to check in the respective activity arrays.
+ * @returns Information about where the nearest activity may be located, or an object with -1 indices when there are no activities remaining.
  */
-function findNearestPeak(peakArrays: Peak[][], nextPeakIndices: number[]): { arrayIndex: number, peakIndex: number } {
+function findNearestActivity(activityArrays: (Peak | Lull)[][], nextActivityIndices: number[]): { arrayIndex: number, elementIndex: number } {
   let minimumTime = Number.MAX_SAFE_INTEGER;
   let minimumArrayIndex = -1;
-  let minimumPeakIndex = -1;
+  let minimumElementIndex = -1;
 
-  for(let arrayIndex = 0; arrayIndex < peakArrays.length; arrayIndex++) {
-    const peakArrayToScan = peakArrays[arrayIndex];
-    const nextPeakIndex = nextPeakIndices[arrayIndex];
+  for(let arrayIndex = 0; arrayIndex < activityArrays.length; arrayIndex++) {
+    const activityArrayToScan = activityArrays[arrayIndex];
+    const nextActivityIndex = nextActivityIndices[arrayIndex];
 
     // If this array doesn't have any more elements, skip over it
-    if (nextPeakIndex >= peakArrayToScan.length) {
+    if (nextActivityIndex >= activityArrayToScan.length) {
       continue;
     }
 
     // See if this comes before our current minimum - if so, update 
-    const peakAtIndex = peakArrayToScan[nextPeakIndex];
+    const activityAtIndex = activityArrayToScan[nextActivityIndex];
 
-    if (peakAtIndex.time < minimumTime) {
-      minimumTime = peakAtIndex.time;
+    if (activityAtIndex.time < minimumTime) {
+      minimumTime = activityAtIndex.time;
       minimumArrayIndex = arrayIndex;
-      minimumPeakIndex = nextPeakIndex;
+      minimumElementIndex = nextActivityIndex;
     }
   }
   
   return {
     arrayIndex: minimumArrayIndex,
-    peakIndex: minimumPeakIndex
+    elementIndex: minimumElementIndex
   }
 }
 
-function findLulls(trackLength: number, expectedLulls: number, peakArrays: Peak[][]): Lull[] {
-  if (expectedLulls <= 0 || peakArrays.length <= 0) {
+/**
+ * Finds lulls in the track between the specified collection of activities.
+ * @param trackLength The length of the track, in fractional seconds.
+ * @param maximumLulls The maximum number of lulls that can be returned.
+ * @param shortestDuration The shortest allowable duration of lull.
+ * @param activityArrays The activities to skip over when determining lulls. 
+ * @returns 
+ */
+function findLulls(trackLength: number, maximumLulls: number, shortestDuration: number, activityArrays: (Peak | Lull)[][]): Lull[] {
+  if (maximumLulls <= 0 || activityArrays.length <= 0) {
     return [];
   }
 
   // Filter out empty arrays
-  peakArrays = peakArrays.filter((peakArray) => peakArray.length > 0);
+  activityArrays = activityArrays.filter((activityArrays) => activityArrays.length > 0);
 
   // Now build an array of the next element to look for in each array
-  const nextPeakIndices: number[] = peakArrays.map(() => 0);
+  const nextActivityIndices: number[] = activityArrays.map(() => 0);
 
   // We want to track the longest lulls available
   let sortedLongestLulls: Lull[] = [];
-  let minimumLullDuration = 0.0;
+  let minimumLullDuration = shortestDuration;
   let startOfCurrentPeriod = 0.0;
 
   while(true) {
-    // Get the nearest peak
-    const nearestPeakLocation = findNearestPeak(peakArrays, nextPeakIndices);
+    // Get the nearest activity
+    const nearestActivityLocation = findNearestActivity(activityArrays, nextActivityIndices);
 
     // See if we ran out of arrays to scan
-    if (nearestPeakLocation.arrayIndex === -1) {
+    if (nearestActivityLocation.arrayIndex === -1) {
       // Create an ending lull that goes to the end of the track
       const endingLull: Lull = {
         time: startOfCurrentPeriod,
+        end: trackLength,
         duration: trackLength - startOfCurrentPeriod
       };
 
       // See if that's sufficient
       if (endingLull.duration > minimumLullDuration) {
-        tryInsertSortedLull(sortedLongestLulls, expectedLulls, endingLull);
+        tryInsertSortedLull(sortedLongestLulls, maximumLulls, endingLull);
       }
 
       // Exit out since we have nothing left to scan
       break;
     }
 
-    // Ensure we increment the next peak index for the source array
-    nextPeakIndices[nearestPeakLocation.arrayIndex]++;
+    // Ensure we increment the next activity index for the source array
+    nextActivityIndices[nearestActivityLocation.arrayIndex]++;
 
     // Now pull what we just found.
     // If it's in the past, skip over it and keep searching.
-    const nearestPeak = peakArrays[nearestPeakLocation.arrayIndex][nearestPeakLocation.peakIndex];
+    // This handles when multiple elements have identical starts, with one exception -
+    // we want items starting at the very beginning of the song to be respected
+    const nearestActivity = activityArrays[nearestActivityLocation.arrayIndex][nearestActivityLocation.elementIndex];
 
-    if (nearestPeak.time <= startOfCurrentPeriod) {
+    if (nearestActivity.time > 0 && nearestActivity.time <= startOfCurrentPeriod) {
       continue;
     }
 
-    // Create a new lull ranging from our starting point up to this peak
+    // Create a new lull ranging from our starting point up to start of the activity
     const newLull: Lull = {
       time: startOfCurrentPeriod,
-      duration: nearestPeak.time - startOfCurrentPeriod
+      end: nearestActivity.time,
+      duration: nearestActivity.time - startOfCurrentPeriod
     };
 
-    // See if we can insert this
+    // See if there is room for this lull in the collection.
     // Use the minimumLullDuration as an optimization before actually comparing against array elements
-    if (newLull.duration > minimumLullDuration && tryInsertSortedLull(sortedLongestLulls, expectedLulls, newLull)) {
+    if (newLull.duration > minimumLullDuration && tryInsertSortedLull(sortedLongestLulls, maximumLulls, newLull)) {
       
       // We successfully inserted.
       // If we're at the maximum array length, ensure the minimum duration is up-to-date.
-      if (sortedLongestLulls.length >= expectedLulls) {
+      if (sortedLongestLulls.length >= maximumLulls) {
         minimumLullDuration = sortedLongestLulls[sortedLongestLulls.length - 1].duration;
       }
     }
 
-    // Now move the start of the next period to the end of the peak
+    // Now move the start of the next period to the end of the activity
     // Also artifically increase the time so that we don't have too many too quickly
-    startOfCurrentPeriod = nearestPeak.end + 1.0;
+    startOfCurrentPeriod = nearestActivity.end + 1.0;
 
     // If we're past the song length, exit out
     if (startOfCurrentPeriod > trackLength) {
@@ -802,7 +814,7 @@ function findLulls(trackLength: number, expectedLulls: number, peakArrays: Peak[
   // Sort the lulls by time
   return sortedLongestLulls.sort((a, b) => {
     return a.time - b.time;
-  })
+  });
 }
 
 export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
@@ -886,8 +898,24 @@ export async function analyzeTrack(file: File): Promise<TrackAnalysis> {
       analysis.bass = bassResult;
       analysis.beat = beatResult;
       analysis.treble = trebleResult;
-      analysis.lulls = findLulls(trackLength, Math.floor((trackLength / 60) * 6), [beatResult, trebleResult])
       analysis.trackHash = Math.floor(file.lastModified + file.size) + 1;
+
+      // Calculate lulls last since that depends on other analysis components
+      const maxLullsForTrack = Math.floor((trackLength / 60) * 6);
+      const minLullDuration = analysis.secondsPerMeasure;
+
+      analysis.lulls = findLulls(trackLength, maxLullsForTrack, minLullDuration, [beatResult, trebleResult]);
+
+      // Try to add more if we're still under
+      if (analysis.lulls.length < maxLullsForTrack) {
+        // Look for more lulls, skipping over already-existing lulls and the sub-bass peaks
+        analysis.lulls.push(...findLulls(trackLength, maxLullsForTrack - analysis.lulls.length, minLullDuration, [analysis.lulls, subBassResult]));
+
+        // Re-sort based on time
+        analysis.lulls.sort((a, b) => {
+          return a.time - b.time;
+        });
+      }
 
       return analysis;
     });

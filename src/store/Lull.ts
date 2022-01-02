@@ -8,7 +8,13 @@
   time: number;
 
   /**
+   * The end of the lull, in fractional seconds.
+   * This is included for symmetry with Peak for the purposes of union typing.
+   */
+  end: number;
+
+  /**
    * The duration of the lull, in fractional seconds.
    */
-   duration: number;
+  duration: number;
 }

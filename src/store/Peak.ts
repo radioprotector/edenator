@@ -10,7 +10,7 @@ export default interface Peak {
   /**
    * The end of the peak, in fractional seconds.
    */
-   end: number;
+  end: number;
 
   /**
    * The maximum intensity of the peak on a 0.0-1.0 scale.
@@ -20,5 +20,5 @@ export default interface Peak {
   /**
    * The maximum intensity of the peak on a floating-point scale, normalized relative to the current volume.
    */
-   intensityNormalized: number;
+  intensityNormalized: number;
 }
