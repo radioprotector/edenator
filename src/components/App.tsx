@@ -10,6 +10,16 @@ import AppStyles from './AppStyles';
 import Visualizer from './Visualizer';
 import ThemeReviewer from './ThemeReviewer';
 
+function getAllowedAudioFileTypes(): string {
+  // Work around Webkit bug https://bugs.webkit.org/show_bug.cgi?id=34442
+  if (navigator.userAgent.indexOf('AppleWebKit') > -1) {
+    return '.mp3,.m4a,.ogg,.aac,.flac';
+  }
+  else {
+    return 'audio/*';
+  }
+}
+
 function App(): JSX.Element {
   // Keep track of what we played last so we can free the object URL when switching tracks
   let playingFileUrl: string = '';
@@ -232,7 +242,7 @@ function App(): JSX.Element {
           ref={sourceFileElement}
           id="sourceFile"
           aria-label="Choose an audio file"
-          accept="audio/*"
+          accept={getAllowedAudioFileTypes()}
           onChange={selectedFileChange}
         />
       </div>
