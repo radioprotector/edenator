@@ -671,8 +671,10 @@ function tryInsertSortedLull(targetArray: Lull[], maxArrayLength: number, newIte
       // Trim off the last element of the array if we're over-length
       if (targetArray.length > maxArrayLength) {
         targetArray.pop();
-        return true;
       }
+
+      // Indicate we successfully inserted!
+      return true;
     }
   }
 
@@ -788,7 +790,13 @@ function findLulls(trackLength: number, expectedLulls: number, peakArrays: Peak[
     }
 
     // Now move the start of the next period to the end of the peak
-    startOfCurrentPeriod = nearestPeak.end;
+    // Also artifically increase the time so that we don't have too many too quickly
+    startOfCurrentPeriod = nearestPeak.end + 1.0;
+
+    // If we're past the song length, exit out
+    if (startOfCurrentPeriod > trackLength) {
+      break;
+    }
   }
 
   // Sort the lulls by time
