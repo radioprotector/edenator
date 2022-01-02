@@ -159,8 +159,14 @@ function App(): JSX.Element {
 
           playingFileUrl = newAudioUrl;
           introElement.current.hidden = true;
+          const newTheme = getThemeForTrack(analyzerResult);
+
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug(`switching to ${newTheme.name} theme`);
+          }
+
           setStoreAnalysis(analyzerResult);
-          setStoreTheme(getThemeForTrack(analyzerResult));
+          setStoreTheme(newTheme);
           setStoreAudioSeeked();
         })
         .catch((reason: any) => {

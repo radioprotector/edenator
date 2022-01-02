@@ -216,7 +216,7 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
 
 export const defaultTheme = generateThemeForColor('default', new THREE.Color(0xff6600), new THREE.Color(0xff3333), new THREE.Color(0xff9933));
 
-const magentaTheme = generateThemeForColor('magenta', new THREE.Color(0xff66ff), new THREE.Color(0xff3399), new THREE.Color(0x0033ff));
+const magentaTheme = generateThemeForColor('magenta', new THREE.Color(0xff33ff), new THREE.Color(0x993399), new THREE.Color(0x0033ff));
 const indigoTheme = generateThemeForColor('indigo', new THREE.Color(0xcc00ff), new THREE.Color(0x6666ff), new THREE.Color(0x6633ff));
 const darkBlueTheme = generateThemeForColor('deep blue', new THREE.Color(0x0033ff), new THREE.Color(0xcc9900), new THREE.Color(0x00cccc));
 const midBlueTheme = generateThemeForColor('mid blue', new THREE.Color(0x6699ff), new THREE.Color(0x66cc66), new THREE.Color(0x3366ff));
