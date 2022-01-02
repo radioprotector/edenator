@@ -18,7 +18,7 @@ const NO_SCALE = new THREE.Vector3().setScalar(1);
  */
 const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Matrix4][] = [
   [
-    new THREE.ConeGeometry(BASE_RADIUS, BASE_RADIUS * 2, undefined, undefined, true),
+    new THREE.ConeGeometry(BASE_RADIUS, BASE_RADIUS * 3, undefined, undefined, true),
     new THREE.Matrix4().compose(EMPTY_VECTOR, NO_ROTATION, NO_SCALE)
   ],
   [
@@ -39,7 +39,7 @@ const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Matrix4][] = [
   ],
   [
     new THREE.TorusGeometry(BASE_RADIUS, BASE_RADIUS / 2, undefined, undefined, Math.PI),
-    new THREE.Matrix4().compose(new THREE.Vector3(0, -BASE_RADIUS/2, 0), ROTATE_90, NO_SCALE)
+    new THREE.Matrix4().compose(new THREE.Vector3(0, -BASE_RADIUS/1.5, 0), ROTATE_90, NO_SCALE)
   ],
   [
     new THREE.CylinderGeometry(BASE_RADIUS, BASE_RADIUS, BASE_RADIUS * 5, undefined, undefined, true),
@@ -48,9 +48,19 @@ const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Matrix4][] = [
 ];
 
 /**
- * The material to use for all scenery.
+ * A material to use for scenery.
  */
 const sceneryMaterial = new THREE.MeshStandardMaterial({ fog: true });
+
+/**
+ * An alternate (differently-colored) material to use for scenery.
+ */
+const sceneryAlternateMaterial = new THREE.MeshStandardMaterial({ fog: true });
+
+/**
+ * A wireframe material to use for scenery.
+ */
+const sceneryWireframeMaterial = new THREE.MeshBasicMaterial({ wireframe: true });
 
 function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   let nextUnrenderedLullIndex = 0;
@@ -87,11 +97,27 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
   // Because the scenery material is cached across multiple renders, just ensure the color reflects the state.
   sceneryMaterial.color = useStore().theme.beat.color;
+  sceneryAlternateMaterial.color = useStore().theme.bass.panelColor;
+  sceneryWireframeMaterial.color = useStore().theme.frequencyGrid.lineColor;
 
   useEffect(() => useStore.subscribe(
     state => state.theme.beat.color,
     (newColor) => {
       sceneryMaterial.color = newColor;
+    }),
+    []);
+
+  useEffect(() => useStore.subscribe(
+    state => state.theme.bass.panelColor,
+    (newColor) => {
+      sceneryAlternateMaterial.color = newColor;
+    }),
+    []);
+
+  useEffect(() => useStore.subscribe(
+    state => state.theme.frequencyGrid.lineColor,
+    (newColor) => {
+      sceneryWireframeMaterial.color = newColor;
     }),
     []);
 
@@ -153,6 +179,21 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         meshForLull.position.x = -HORIZ_OFFSET - geometryPosition.x;
       }
 
+      // Similarly randomize which material is being used - use a different seed
+      switch (trackAnalysis.getTrackSeededRandomInt(0, 2, curLull.time + curLull.duration)) {
+        case 0:
+          meshForLull.material = sceneryMaterial;
+          break;
+
+        case 1:
+          meshForLull.material = sceneryAlternateMaterial;
+          break;
+
+        case 2:
+          meshForLull.material = sceneryWireframeMaterial;
+          break;
+      }
+
       // Reset the vertical offset and apply the geometry-specific offset
       meshForLull.position.y = VERT_OFFSET + geometryPosition.y;
 
@@ -206,6 +247,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       if (lullDisplayStart > audioTime || lullDisplayEnd < lastRenderTime) {
         meshForLull.visible = false;
         delete meshForLull.userData['lull'];
+        delete meshForLull.userData['originalScale'];
         continue;
       }
 
