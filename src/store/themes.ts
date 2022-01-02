@@ -214,20 +214,20 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
   };
 }
 
-export const defaultTheme = generateThemeForColor('default', new THREE.Color(0xEB4500), new THREE.Color(0xF60E0C), new THREE.Color(0xF6960C));
+export const defaultTheme = generateThemeForColor('default', new THREE.Color(0xff6600), new THREE.Color(0xff3333), new THREE.Color(0xff9933));
 
-const magentaTheme = generateThemeForColor('magenta', new THREE.Color('Orchid'), new THREE.Color('DarkOrchid'));
-const indigoTheme = generateThemeForColor('indigo', new THREE.Color('BlueViolet'), new THREE.Color('DarkViolet'));
-const lightBlueTheme = generateThemeForColor('light blue', new THREE.Color('LightBlue'), new THREE.Color('CornflowerBlue'));
-const midBlueTheme = generateThemeForColor('mid blue', new THREE.Color('DeepSkyBlue'), new THREE.Color('LightSkyBlue'));
-const darkBlueTheme = generateThemeForColor('deep blue', new THREE.Color('DodgerBlue'), new THREE.Color('SteelBlue'));
-const blueGreenTheme = generateThemeForColor('blue-green', new THREE.Color('Teal'), new THREE.Color('MediumTurquoise'));
-const greenTheme = generateThemeForColor('green', new THREE.Color('LimeGreen'), new THREE.Color('MediumSeaGreen'));
-const yellowGreenTheme = generateThemeForColor('yellow-green', new THREE.Color('GreenYellow'), new THREE.Color('YellowGreen'));
-const yellowTheme = generateThemeForColor('yellow', new THREE.Color('Gold'), new THREE.Color('Yellow'));
-const orangeTheme = generateThemeForColor('orange', new THREE.Color('OrangeRed'), new THREE.Color('Tomato'));
-const redTheme = generateThemeForColor('red', new THREE.Color('Red'), new THREE.Color('Coral'));
-const pinkTheme = generateThemeForColor('pink', new THREE.Color('HotPink'), new THREE.Color('PaleVioletRed'));
+const magentaTheme = generateThemeForColor('magenta', new THREE.Color(0xff33ff), new THREE.Color(0xff3399));
+const indigoTheme = generateThemeForColor('indigo', new THREE.Color(0xcc00ff), new THREE.Color(0x6633cc));
+const lightBlueTheme = generateThemeForColor('light blue', new THREE.Color(0xccccff), new THREE.Color(0x6666ff));
+const midBlueTheme = generateThemeForColor('mid blue', new THREE.Color(0x99999ff), new THREE.Color(0x99ccff));
+const darkBlueTheme = generateThemeForColor('deep blue', new THREE.Color(0x0033ff), new THREE.Color(0x33ccff));
+const blueGreenTheme = generateThemeForColor('blue-green', new THREE.Color(0x00ffff), new THREE.Color(0x66ffcc));
+const greenTheme = generateThemeForColor('green', new THREE.Color(0x00ff00), new THREE.Color(0x33ffcc));
+const yellowGreenTheme = generateThemeForColor('yellow-green', new THREE.Color(0x99ffcc), new THREE.Color(0xccff99));
+const yellowTheme = generateThemeForColor('yellow', new THREE.Color(0xffcc00), new THREE.Color(0xcccc33));
+const orangeTheme = generateThemeForColor('orange', new THREE.Color(0xff6600), new THREE.Color(0xffcc00), new THREE.Color(0xcccc33));
+const redTheme = generateThemeForColor('red', new THREE.Color(0xff0000), new THREE.Color(0xff6699));
+const pinkTheme = generateThemeForColor('pink', new THREE.Color(0xff99cc), new THREE.Color(0xffccff));
 
 const hotdogStandTheme = generateThemeForColor('hotdog stand', new THREE.Color(0xff0000), new THREE.Color(0xffff00));
 const fluorescentTheme = generateThemeForColor('fluorescent', new THREE.Color(0xff00ff), new THREE.Color(0x00ff00));
