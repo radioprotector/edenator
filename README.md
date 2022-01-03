@@ -25,6 +25,7 @@ The `Visualizer` component is responsible for configuring the [Canvas](https://d
 - `BassTunnel` displays "trench walls" that are scrolled (and randomized) as the song progresses to provide a sense of motion and scaled as **bass/sub-bass peaks** are encountered.
 - `BeatQueue` provides a visual representation of the **beat peaks** in the song.
 - `FrequencyGrid` provides a visual representation of the currently-playing audio and provides a sense of motion.
+- `SceneryQueue` provides a visual representation of the lulls in the song and further contributes to a sense of motion.
 - `TrebleQueue` provides a visual representation of the **treble peaks** in the song, using transparent sprites and lighting.
 - `VfxManager` defines post-processing effects, the intensity of which are controlled by the currently-playing audio.
 
@@ -50,6 +51,8 @@ For HTML elements that are influenced by the theme, we use the following approac
 
 The `AppStyles` component is also responsible for dynamically updating the page's `<meta name="theme-color">` tag and application icon based on the theme.
 
+The `ThemeReviewer` component is only included in development builds and adds a "Review themes" button that will enumerate the themes and the colors they use in a tabular format for easier comparison, contrast, and previewing of resulting colors.
+
 ## Song Analysis
 
 While the [Web Audio API's AnalyserNode](https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode) can be used to provide many real-time visualizations, it does not allow for "looking ahead" into the progression of the song. As a result, to have a beat approaching from afar (before it has been played) and only encountering the camera while it is being played requires analysis of the track ahead of time.
@@ -59,6 +62,7 @@ As a result, when a song is selected, it goes through an analysis process which 
 - Parsing metadata tags to determine the artist, title, BPM (if available), and key (if available)
 - Determining the overall track volume throughout the song
 - Identifying peaks in various frequency ranges that exceed specified absolute and relative (to the overall track volume) thresholds
+- Identifying lulls in the song
 
 This process ultimately produces a `TrackAnalysis` object which is used throughout the visualization system.
 
@@ -80,6 +84,16 @@ While peak detection will use absolute and relative thresholds for detection, th
 | Treble       |    2048 |     n/a |        120 |
 
 In the event a BPM value was not found in the tags, the system will attempt to determine one based on the **Beat** peaks detected above. Automatic detection will tend to produce results in the 90-180 BPM range, and to date appears to be slightly higher than the "normal" BPM of a song. This may be due to the fact that the beat range's parameters are somewhat more oriented towards a visually appealing display rather than pure BPM detection.
+
+### Lull Detection
+
+Lull detection is performed after the main peak analyses have been performed. Lulls are primarily intended to add further visual detail to the times when fewer peaks are represented on-screen.
+
+The detection process sets a certain number of maximum lulls per minute and a minimum duration (tied to measure length) for each lull. The scanning process will keep track of the longest lulls identified and will discard shorter lulls in preference to longer lulls if the limit has already been reached.
+
+Lulls are first scanned against the beat and treble peaks. If, after scanning, the limit has not been hit, lulls are then scanned against the sub-bass peaks and the already-detected lulls.
+
+As a last resort, the longest lulls will be continually subdivided until the limit has been hit or the longest lull in the collection is less than twice that of the shortest lull in the collection.
 
 ### Track Hashing and Randomness
 
