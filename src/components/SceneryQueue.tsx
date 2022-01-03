@@ -7,43 +7,33 @@ import { generateNumericArray } from '../utils';
 import Lull from '../store/Lull';
 
 const BASE_RADIUS = 150;
-const EMPTY_VECTOR = new THREE.Vector3(0, 0, 0);
-const NO_ROTATION = new THREE.Quaternion();
-// const FLIP_VERTICAL = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
-const ROTATE_90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
-const NO_SCALE = new THREE.Vector3().setScalar(1);
+const NO_TRANSLATION = new THREE.Vector3(0, 0, 0);
 
 /**
- * The collection of geometries that can be used for scenery and the transformation matrices to use for them.
+ * The collection of geometries that can be used for scenery and the translation to use for it.
  */
-const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Matrix4][] = [
+const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Vector3][] = [
   [
     new THREE.ConeGeometry(BASE_RADIUS, BASE_RADIUS * 3, undefined, undefined, true),
-    new THREE.Matrix4().compose(EMPTY_VECTOR, NO_ROTATION, NO_SCALE)
+    NO_TRANSLATION
   ],
   [
     // The top half of a sphere - make sure we move it down so it's flush
     new THREE.SphereGeometry(BASE_RADIUS, undefined, undefined, undefined, undefined, 0, Math.PI / 2),
-    new THREE.Matrix4().compose(new THREE.Vector3(0, -BASE_RADIUS/2, 0), NO_ROTATION, NO_SCALE)
+    new THREE.Vector3(0, -BASE_RADIUS/2, 0)
   ],
-  // [
-  //   // This is tricky to get right - holding off for now
-  //   new THREE.LatheGeometry(
-  //     [new THREE.Vector2(0.1, 1), new THREE.Vector2(0.2, 0.95), new THREE.Vector2(0.3, 0.9), new THREE.Vector2(0.5, 0.6), new THREE.Vector2(0.6, 0.1), new THREE.Vector2(0.65, 0)]
-  //   ),
-  //   new THREE.Matrix4().compose(new THREE.Vector3(0, -BASE_RADIUS, 0), NO_ROTATION, new THREE.Vector3(BASE_RADIUS, BASE_RADIUS, BASE_RADIUS))
-  // ],
   [
     new THREE.BoxGeometry(BASE_RADIUS, BASE_RADIUS * 5, BASE_RADIUS),
-    new THREE.Matrix4().compose(EMPTY_VECTOR, NO_ROTATION, NO_SCALE)
+    NO_TRANSLATION
   ],
   [
-    new THREE.TorusGeometry(BASE_RADIUS, BASE_RADIUS / 2, undefined, undefined, Math.PI),
-    new THREE.Matrix4().compose(new THREE.Vector3(0, -BASE_RADIUS/1.5, 0), ROTATE_90, NO_SCALE)
+    // The top half of a torus - move it down like the sphere and rotate it so it's parallel to the walls
+    new THREE.TorusGeometry(BASE_RADIUS, BASE_RADIUS / 2, undefined, undefined, Math.PI).rotateY(Math.PI / 2),
+    new THREE.Vector3(0, -BASE_RADIUS/1.5, 0)
   ],
   [
     new THREE.CylinderGeometry(BASE_RADIUS, BASE_RADIUS, BASE_RADIUS * 5, undefined, undefined, true),
-    new THREE.Matrix4().compose(EMPTY_VECTOR, NO_ROTATION, NO_SCALE)
+    NO_TRANSLATION
   ]
 ];
 
@@ -166,10 +156,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       meshForLull.geometry = SCENERY_GEOMETRIES[geometryIndex][0];
 
       // Pull geometry-specific translation information
-      const geometryPosition = new THREE.Vector3();
-      const geometryRotation = new THREE.Quaternion();
-      const geometryScale = new THREE.Vector3();
-      SCENERY_GEOMETRIES[geometryIndex][1].decompose(geometryPosition, geometryRotation, geometryScale);
+      const geometryPosition = SCENERY_GEOMETRIES[geometryIndex][1];
 
       // Randomize whether it's on the left or right and apply the geometry-specific offset in the same direction
       if (trackAnalysis.getTrackSeededRandomInt(0, 1, curLull.time) === 0) {
@@ -196,13 +183,6 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
       // Reset the vertical offset and apply the geometry-specific offset
       meshForLull.position.y = VERT_OFFSET + geometryPosition.y;
-
-      // Copy over the scale and rotation wholesale
-      meshForLull.scale.copy(geometryScale);
-      meshForLull.rotation.setFromQuaternion(geometryRotation);
-
-      // Also store the original scale
-      meshForLull.userData['originalScale'] = geometryScale;
       
       // Switch around to the next item in the ring buffer
       nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableSceneryMeshesRing.current.length;
@@ -233,7 +213,6 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
     {
       const meshForLull = availableSceneryMeshesRing.current[itemIdx];
       const lullData = meshForLull.userData['lull'] as Lull;
-      const originalScale = meshForLull.userData['originalScale'] as THREE.Vector3;
 
       if (lullData === null || lullData === undefined) {
         meshForLull.visible = false;
@@ -247,7 +226,6 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       if (lullDisplayStart > audioTime || lullDisplayEnd < lastRenderTime) {
         meshForLull.visible = false;
         delete meshForLull.userData['lull'];
-        delete meshForLull.userData['originalScale'];
         continue;
       }
 
@@ -264,9 +242,9 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       const easedUpZScale = meshForLull.scale.z * 1.005;
 
       meshForLull.scale.set(
-        Math.max(easedDownXScale, Math.min(easedUpXScale, originalScale.x * (1.0 + widthAndDepthScalingFactor))),
-        Math.max(easedDownYScale, Math.min(easedUpYScale, originalScale.y * (1.0 + verticalScalingFactor))),
-        Math.max(easedDownZScale, Math.min(easedUpZScale, originalScale.z * (1.0 + widthAndDepthScalingFactor))));
+        Math.max(easedDownXScale, Math.min(easedUpXScale, 1.0 + widthAndDepthScalingFactor)),
+        Math.max(easedDownYScale, Math.min(easedUpYScale, 1.0 + verticalScalingFactor)),
+        Math.max(easedDownZScale, Math.min(easedUpZScale, 1.0 + widthAndDepthScalingFactor)));
     }
   });
 
