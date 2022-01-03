@@ -728,11 +728,11 @@ function findNearestActivity(activityArrays: (Peak | Lull)[][], nextActivityIndi
  * Finds lulls in the track between the specified collection of activities.
  * @param trackLength The length of the track, in fractional seconds.
  * @param maximumLulls The maximum number of lulls that can be found.
- * @param shortestDuration The shortest allowable duration of lull.
+ * @param minimumLullDuration The shortest allowable lull, in fractional seconds.
  * @param activityArrays The activities to skip over when determining lulls. Each should be sorted in time-ascending order.
  * @returns The resulting collection of lulls.
  */
-function findLulls(trackLength: number, maximumLulls: number, shortestDuration: number, activityArrays: (Peak | Lull)[][]): Lull[] {
+function findLulls(trackLength: number, maximumLulls: number, minimumLullDuration: number, activityArrays: (Peak | Lull)[][]): Lull[] {
   if (maximumLulls <= 0 || activityArrays.length <= 0) {
     return [];
   }
@@ -747,7 +747,7 @@ function findLulls(trackLength: number, maximumLulls: number, shortestDuration: 
 
   // We want to track the longest lulls available
   let sortedLongestLulls: Lull[] = [];
-  let minimumLullDuration = shortestDuration;
+  let lullDurationCutoff = minimumLullDuration;
   let startOfCurrentPeriod = 0.0;
 
   while(true) {
@@ -764,7 +764,7 @@ function findLulls(trackLength: number, maximumLulls: number, shortestDuration: 
       };
 
       // See if that's sufficient
-      if (endingLull.duration > minimumLullDuration) {
+      if (endingLull.duration > lullDurationCutoff) {
         tryInsertSortedLull(sortedLongestLulls, maximumLulls, endingLull);
       }
 
@@ -793,19 +793,19 @@ function findLulls(trackLength: number, maximumLulls: number, shortestDuration: 
     };
 
     // See if there is room for this lull in the collection.
-    // Use the minimumLullDuration as an optimization before actually comparing against array elements
-    if (newLull.duration > minimumLullDuration && tryInsertSortedLull(sortedLongestLulls, maximumLulls, newLull)) {
+    // Use the lullDurationCutoff as an optimization before actually comparing against array elements
+    if (newLull.duration > lullDurationCutoff && tryInsertSortedLull(sortedLongestLulls, maximumLulls, newLull)) {
       
       // We successfully inserted.
       // If we're at the maximum array length, ensure the minimum duration is up-to-date.
       if (sortedLongestLulls.length >= maximumLulls) {
-        minimumLullDuration = sortedLongestLulls[sortedLongestLulls.length - 1].duration;
+        lullDurationCutoff = sortedLongestLulls[sortedLongestLulls.length - 1].duration;
       }
     }
 
     // Now move the start of the next period to the end of the activity
     // Also artifically increase the time so that we don't have too many too quickly
-    startOfCurrentPeriod = nearestActivity.end + 1.0;
+    startOfCurrentPeriod = nearestActivity.end + minimumLullDuration;
 
     // If we're past the song length, exit out
     if (startOfCurrentPeriod > trackLength) {
