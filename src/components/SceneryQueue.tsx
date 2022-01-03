@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 
 import { useStore } from '../store/visualizerStore';
 import { generateNumericArray } from '../utils';
+import { TrackAnalysis } from '../store/TrackAnalysis';
 import Lull from '../store/Lull';
 
 const BASE_RADIUS = 150;
@@ -52,6 +53,39 @@ const sceneryAlternateMaterial = new THREE.MeshStandardMaterial({ fog: true });
  */
 const sceneryWireframeMaterial = new THREE.MeshBasicMaterial({ wireframe: true });
 
+const ALL_MATERIALS = [
+  sceneryMaterial,
+  sceneryAlternateMaterial,
+  sceneryWireframeMaterial
+];
+
+function assignMaterialsToMesh(mesh: THREE.Mesh, forLull: Lull, trackAnalysis: TrackAnalysis): void {
+  // First, handle when this mesh's geometry only has one group for materials
+  if (mesh.geometry.groups.length <= 1) {
+    // Randomly assign one of the materials.
+    // When getting a random value, use the end to get different seeding results than what we have for geometry.
+    const materialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, forLull.end);
+    mesh.material = ALL_MATERIALS[materialIndex];
+  }
+  else {
+
+    // We have multiple groups. Get materials for even/odd groups
+    const evenMaterialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, forLull.end);
+    const oddMaterialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, forLull.end + 1);
+
+    mesh.material = [];
+  
+    for (let groupIndex = 0; groupIndex < mesh.geometry.groups.length; groupIndex++) {
+      if (groupIndex % 2 === 0) {
+        mesh.material[groupIndex] = ALL_MATERIALS[evenMaterialIndex];
+      }
+      else {
+        mesh.material[groupIndex] = ALL_MATERIALS[oddMaterialIndex];
+      } 
+    }
+  }
+}
+
 function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   let nextUnrenderedLullIndex = 0;
   let nextAvailableMeshIndex = 0;
@@ -81,7 +115,6 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         visible={false}
         ref={(m: THREE.Mesh) => availableSceneryMeshesRing.current[index] = m}
         position={[HORIZ_OFFSET, VERT_OFFSET, SCENERY_DEPTH_START]}
-        material={sceneryMaterial}
       />
     });
 
@@ -166,20 +199,8 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         meshForLull.position.x = -HORIZ_OFFSET - geometryPosition.x;
       }
 
-      // Similarly randomize which material is being used - use a different seed
-      switch (trackAnalysis.getTrackSeededRandomInt(0, 2, curLull.time + curLull.duration)) {
-        case 0:
-          meshForLull.material = sceneryMaterial;
-          break;
-
-        case 1:
-          meshForLull.material = sceneryAlternateMaterial;
-          break;
-
-        case 2:
-          meshForLull.material = sceneryWireframeMaterial;
-          break;
-      }
+      // Similarly randomize which material is being used for each face
+      assignMaterialsToMesh(meshForLull, curLull, trackAnalysis);
 
       // Reset the vertical offset and apply the geometry-specific offset
       meshForLull.position.y = VERT_OFFSET + geometryPosition.y;
