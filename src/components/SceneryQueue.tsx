@@ -16,7 +16,7 @@ const NO_TRANSLATION = new THREE.Vector3(0, 0, 0);
 const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Vector3][] = [
   [
     new THREE.ConeGeometry(BASE_RADIUS, BASE_RADIUS * 3, undefined, undefined, true),
-    NO_TRANSLATION
+    new THREE.Vector3(0, BASE_RADIUS, 0)
   ],
   [
     // The top half of a sphere - make sure we move it down so it's flush
@@ -39,24 +39,30 @@ const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Vector3][] = [
 ];
 
 /**
- * A material to use for scenery.
+ * A material to use for scenery, using the main beat theme color.
  */
-const sceneryMaterial = new THREE.MeshStandardMaterial({ fog: true });
+const beatColorMaterial = new THREE.MeshStandardMaterial({ fog: true });
 
 /**
- * An alternate (differently-colored) material to use for scenery.
+ * A material to use for scenery, using the bass panel theme color.
  */
-const sceneryAlternateMaterial = new THREE.MeshStandardMaterial({ fog: true });
+const bassColorMaterial = new THREE.MeshStandardMaterial({ fog: true });
 
 /**
- * A wireframe material to use for scenery.
+ * A material to use for scenery, using the star flash theme color.
  */
-const sceneryWireframeMaterial = new THREE.MeshBasicMaterial({ wireframe: true });
+ const starFlashColorMaterial = new THREE.MeshStandardMaterial({ fog: true });
+
+/**
+ * A wireframe material to use for scenery, using the frequency line theme color.
+ */
+const frequencyWireframeMaterial = new THREE.MeshBasicMaterial({ wireframe: true });
 
 const ALL_MATERIALS = [
-  sceneryMaterial,
-  sceneryAlternateMaterial,
-  sceneryWireframeMaterial
+  beatColorMaterial,
+  bassColorMaterial,
+  starFlashColorMaterial,
+  frequencyWireframeMaterial
 ];
 
 function assignMaterialsToMesh(mesh: THREE.Mesh, forLull: Lull, trackAnalysis: TrackAnalysis): void {
@@ -93,7 +99,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
   const QUEUE_SIZE = 20;
   const SCENERY_DEPTH_START = -1000;
   const SCENERY_DEPTH_END = 0;
-  const HORIZ_OFFSET = BASE_RADIUS * 2;
+  const HORIZ_OFFSET = BASE_RADIUS * 2.5;
   const VERT_OFFSET = -10;
 
   const trackAnalysis = useStore(state => state.analysis);
@@ -119,28 +125,36 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
     });
 
   // Because the scenery material is cached across multiple renders, just ensure the color reflects the state.
-  sceneryMaterial.color = useStore().theme.beat.color;
-  sceneryAlternateMaterial.color = useStore().theme.bass.panelColor;
-  sceneryWireframeMaterial.color = useStore().theme.frequencyGrid.lineColor;
+  beatColorMaterial.color = useStore().theme.beat.color;
+  bassColorMaterial.color = useStore().theme.bass.panelColor;
+  starFlashColorMaterial.color = useStore().theme.background.starFlashColor;
+  frequencyWireframeMaterial.color = useStore().theme.frequencyGrid.lineColor;
 
   useEffect(() => useStore.subscribe(
     state => state.theme.beat.color,
     (newColor) => {
-      sceneryMaterial.color = newColor;
+      beatColorMaterial.color = newColor;
     }),
     []);
 
   useEffect(() => useStore.subscribe(
     state => state.theme.bass.panelColor,
     (newColor) => {
-      sceneryAlternateMaterial.color = newColor;
+      bassColorMaterial.color = newColor;
     }),
     []);
 
   useEffect(() => useStore.subscribe(
+    state => state.theme.background.starFlashColor,
+    (newColor) => {
+      starFlashColorMaterial.color = newColor;
+    }),
+    []);  
+
+  useEffect(() => useStore.subscribe(
     state => state.theme.frequencyGrid.lineColor,
     (newColor) => {
-      sceneryWireframeMaterial.color = newColor;
+      frequencyWireframeMaterial.color = newColor;
     }),
     []);
 
@@ -221,7 +235,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       props.analyser.current.getByteFrequencyData(frequencies);
 
       if (Number.isFinite(frequencies[7])) {
-        verticalScalingFactor = (frequencies[7] / 255.0) / 2;
+        verticalScalingFactor = (frequencies[7] / 255.0) / 3;
       }
 
       if (Number.isFinite(frequencies[23])) {
@@ -258,9 +272,9 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       const easedDownXScale = meshForLull.scale.x * 0.995;
       const easedDownYScale = meshForLull.scale.y * 0.995;
       const easedDownZScale = meshForLull.scale.z * 0.995;
-      const easedUpXScale = meshForLull.scale.x * 1.005;
-      const easedUpYScale = meshForLull.scale.y * 1.005;
-      const easedUpZScale = meshForLull.scale.z * 1.005;
+      const easedUpXScale = meshForLull.scale.x * 1.0025;
+      const easedUpYScale = meshForLull.scale.y * 1.0025;
+      const easedUpZScale = meshForLull.scale.z * 1.0025;
 
       meshForLull.scale.set(
         Math.max(easedDownXScale, Math.min(easedUpXScale, 1.0 + widthAndDepthScalingFactor)),
