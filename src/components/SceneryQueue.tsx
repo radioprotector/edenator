@@ -96,7 +96,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
   let nextUnrenderedLullIndex = 0;
   let nextAvailableMeshIndex = 0;
   const availableSceneryMeshesRing = useRef<THREE.Mesh[]>([]);
-  const QUEUE_SIZE = 20;
+  const QUEUE_SIZE = 10;
   const SCENERY_DEPTH_START = -1000;
   const SCENERY_DEPTH_END = 0;
   const HORIZ_OFFSET = BASE_RADIUS * 2.5;
@@ -104,14 +104,10 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
   const trackAnalysis = useStore(state => state.analysis);
 
-  // Make the lookahead and decay periods variable based on measure lengths
+  // Make the lookahead period variable based on measure lengths
   const lookaheadPeriod = useMemo(() => {
     return trackAnalysis.secondsPerMeasure * 2;
   }, [trackAnalysis]);
-
-  const decayPeriod = useMemo(() => {
-    return trackAnalysis.secondsPerMeasure * 0.25;
-  }, [trackAnalysis])
 
   // Generate available sprites for use in a ring buffer
   const availableMeshElements = 
@@ -181,7 +177,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
     for (let lullIdx = nextUnrenderedLullIndex; lullIdx < trackAnalysis.lulls.length; lullIdx++) {
       const curLull = trackAnalysis.lulls[lullIdx];
       const lullDisplayStart = curLull.time - lookaheadPeriod;
-      const lullDisplayEnd = curLull.time + curLull.duration + decayPeriod;
+      const lullDisplayEnd = curLull.time + curLull.duration;
 
       // See if we're already too late for this lull - if so, skip ahead
       if (lastRenderTime > lullDisplayEnd) {
@@ -255,7 +251,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       }
 
       const lullDisplayStart = lullData.time - lookaheadPeriod;
-      const lullDisplayEnd = lullData.time + lullData.duration + decayPeriod;
+      const lullDisplayEnd = lullData.time + lullData.duration;
 
       // See if we've finished displaying
       if (lullDisplayStart > audioTime || lullDisplayEnd < lastRenderTime) {
