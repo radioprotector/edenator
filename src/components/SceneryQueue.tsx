@@ -194,15 +194,19 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       const meshForLull = availableSceneryMeshesRing.current[nextAvailableMeshIndex];
       meshForLull.userData['lull'] = curLull;
 
+      // Use different seeds for the geometry/position so that all types of geometries can end up either on the left or right
+      const geometryRandomSeed = curLull.time;
+      const positionSeed = curLull.time + lullIdx;
+
       // Randomize the geometry to use for the mesh
-      const geometryIndex = trackAnalysis.getTrackSeededRandomInt(0, SCENERY_GEOMETRIES.length - 1, curLull.time);
+      const geometryIndex = trackAnalysis.getTrackSeededRandomInt(0, SCENERY_GEOMETRIES.length - 1, geometryRandomSeed);
       meshForLull.geometry = SCENERY_GEOMETRIES[geometryIndex][0];
 
       // Pull geometry-specific translation information
       const geometryPosition = SCENERY_GEOMETRIES[geometryIndex][1];
 
       // Randomize whether it's on the left or right and apply the geometry-specific offset in the same direction
-      if (trackAnalysis.getTrackSeededRandomInt(0, 1, curLull.time) === 0) {
+      if (trackAnalysis.getTrackSeededRandomInt(0, 1, positionSeed) === 0) {
         meshForLull.position.x = HORIZ_OFFSET + geometryPosition.x;
       }
       else {
