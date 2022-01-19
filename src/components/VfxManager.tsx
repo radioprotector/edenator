@@ -1,11 +1,13 @@
 import { RefObject, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
-import { EffectComposer, Bloom, GodRays } from '@react-three/postprocessing';
-import { GodRaysEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
+import { useFrame, useThree } from '@react-three/fiber';
+import { EffectComposer, Bloom, GodRays} from '@react-three/postprocessing';
+import { BloomEffect, GodRaysEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
 function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }): JSX.Element {
+  const bloomEffect = useRef<typeof BloomEffect>(null!);
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
+  const isInVr = useThree((state) => state.vr);
   
   useFrame(() => {
     if (props.audio.current === null || props.audio.current.currentTime <= 0 || props.analyser.current === null || godRaysEffect.current === null) {
@@ -33,32 +35,35 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
   });
 
   return (
-    <EffectComposer>
-      <Bloom
-        intensity={1}
-        width={Resizer.AUTO_SIZE}
-        height={Resizer.AUTO_SIZE}
-        kernelSize={KernelSize.MEDIUM}
-        luminanceThreshold={0.4}
-        luminanceSmoothing={0.1}
-      />
-      <GodRays
-        ref={godRaysEffect}
-        sun={props.sunMesh}
-        blur={10}
-        blendFunction={BlendFunction.Screen}
-        samples={60}
-        density={0.85}
-        decay={0.85}
-        weight={0.4}
-        exposure={0.4}
-        clampMax={1}
-        width={Resizer.AUTO_SIZE}
-        height={Resizer.AUTO_SIZE}
-        kernelSize={KernelSize.MEDIUM}
-      />
-    </EffectComposer>
-  )
+    <group>
+      {!isInVr && <EffectComposer>
+        <Bloom
+          ref={bloomEffect}
+          intensity={1}
+          width={Resizer.AUTO_SIZE}
+          height={Resizer.AUTO_SIZE}
+          kernelSize={KernelSize.MEDIUM}
+          luminanceThreshold={0.4}
+          luminanceSmoothing={0.1}
+        />
+        <GodRays
+          ref={godRaysEffect}
+          sun={props.sunMesh}
+          blur={10}
+          blendFunction={BlendFunction.Screen}
+          samples={60}
+          density={0.85}
+          decay={0.85}
+          weight={0.4}
+          exposure={0.4}
+          clampMax={1}
+          width={Resizer.AUTO_SIZE}
+          height={Resizer.AUTO_SIZE}
+          kernelSize={KernelSize.MEDIUM}
+        />
+      </EffectComposer>}
+    </group>
+  );
 }
 
 export default VfxManager;
