@@ -4,10 +4,10 @@ Edenator is a browser-based music visualizer, implemented using the following li
 
 - [React](https://reactjs.org/)
 - [three.js](https://threejs.org/) and corresponding helper libraries:
-  - [react-three-fiber](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction)
-  - [drei](https://docs.pmnd.rs/drei/introduction)
-  - [react-postprocessing](https://docs.pmnd.rs/react-postprocessing/introduction)
-- [zustand](https://docs.pmnd.rs/zustand/introduction)
+  - [react-three-fiber](https://docs.pmnd.rs/react-three-fiber)
+  - [drei](https://docs.pmnd.rs/drei)
+  - [react-postprocessing](https://docs.pmnd.rs/react-postprocessing)
+- [zustand](https://docs.pmnd.rs/zustand)
 - [styled-components](https://styled-components.com/)
 - [jsmediatags](https://github.com/aadsm/jsmediatags)
 
@@ -97,4 +97,4 @@ As a last resort, the longest lulls will be continually subdivided until the lim
 
 ### Track Hashing and Randomness
 
-Instances of `TrackAnalysis` contain a `trackHash` field, which is a simple hash to try and uniquely identify a particular file. This is used by the `getTrackRandomInt`, `getTrackSeededRandomInt`, and `getTrackSeededRandomFloat` methods to get "random" results that are ultimately predictable based on the track hash. The goal is to have presentation elements display in a randomized fashion that is ultimately _deterministic for the file_, so that repeated visualizations of the song will display as cohesively as possible.
+Instances of `TrackAnalysis` contain a `trackHash` field, which is a simple hash to try and uniquely identify a particular file. This is used by the `getTrackRandomInt`, `getTrackSeededRandomInt`, and `getTrackSeededRandomFloat` methods to get "random" results that are ultimately predictable based on the track hash. The goal is to have presentation elements display in a randomized fashion that is ultimately _deterministic for the file_, so that repeated visualizations of the song will display as consistently as possible.
