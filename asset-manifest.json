@@ -1,22 +1,22 @@
 {
   "files": {
     "main.css": "/edenator/static/css/main.60e27da2.chunk.css",
-    "main.js": "/edenator/static/js/main.495a1428.chunk.js",
-    "main.js.map": "/edenator/static/js/main.495a1428.chunk.js.map",
+    "main.js": "/edenator/static/js/main.daed0614.chunk.js",
+    "main.js.map": "/edenator/static/js/main.daed0614.chunk.js.map",
     "runtime-main.js": "/edenator/static/js/runtime-main.87ffa92a.js",
     "runtime-main.js.map": "/edenator/static/js/runtime-main.87ffa92a.js.map",
-    "static/js/2.72636d43.chunk.js": "/edenator/static/js/2.72636d43.chunk.js",
-    "static/js/2.72636d43.chunk.js.map": "/edenator/static/js/2.72636d43.chunk.js.map",
+    "static/js/2.ba421521.chunk.js": "/edenator/static/js/2.ba421521.chunk.js",
+    "static/js/2.ba421521.chunk.js.map": "/edenator/static/js/2.ba421521.chunk.js.map",
     "static/js/3.7764fc49.chunk.js": "/edenator/static/js/3.7764fc49.chunk.js",
     "static/js/3.7764fc49.chunk.js.map": "/edenator/static/js/3.7764fc49.chunk.js.map",
     "index.html": "/edenator/index.html",
     "static/css/main.60e27da2.chunk.css.map": "/edenator/static/css/main.60e27da2.chunk.css.map",
-    "static/js/2.72636d43.chunk.js.LICENSE.txt": "/edenator/static/js/2.72636d43.chunk.js.LICENSE.txt"
+    "static/js/2.ba421521.chunk.js.LICENSE.txt": "/edenator/static/js/2.ba421521.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
     "static/js/runtime-main.87ffa92a.js",
-    "static/js/2.72636d43.chunk.js",
+    "static/js/2.ba421521.chunk.js",
     "static/css/main.60e27da2.chunk.css",
-    "static/js/main.495a1428.chunk.js"
+    "static/js/main.daed0614.chunk.js"
   ]
 }
