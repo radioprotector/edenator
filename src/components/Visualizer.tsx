@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 
 import { useStore } from '../store/visualizerStore';
+import { ComponentDepths } from './ComponentDepths';
 
 import BassTunnel from './BassTunnel';
 import BeatQueue from './BeatQueue';
@@ -23,7 +24,7 @@ const sunMaterial = new THREE.MeshBasicMaterial({ transparent: true });
  */
 const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(5), sunMaterial);
 sunMesh.frustumCulled = false;
-sunMesh.position.set(0, 0, -200);
+sunMesh.position.set(0, 0, ComponentDepths.Sun);
 
 function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Ensure that the sun's color is updated in response to theme changes
@@ -37,9 +38,9 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
     []);
 
   return (
-    <Canvas camera={{position: [0, 0, 15]}}>
+    <Canvas camera={{position: [0, 0, ComponentDepths.CameraPosition], far: ComponentDepths.CameraFrustrumFar}}>
       <ambientLight intensity={0.1} />
-      <directionalLight position={[0, 0, 20]} />
+      <directionalLight position={[0, 0, ComponentDepths.LightPosition]} />
       <primitive object={sunMesh} />
       <BassTunnel audio={props.audio} />
       <BeatQueue audio={props.audio} />

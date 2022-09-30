@@ -4,23 +4,49 @@ import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 
 import { useStore } from '../store/visualizerStore';
-import { generateNumericArray } from '../utils';
 import Peak from '../store/Peak';
+import { generateNumericArray } from '../utils';
+import { ComponentDepths } from './ComponentDepths';
+
+/**
+ * The size of the treble queue.
+ */
+const QUEUE_SIZE = 20;
+
+/**
+ * The time, in seconds, for which each item is visible before its {@see Peak.time}.
+ */
+const LOOKAHEAD_PERIOD = 0.1;
+
+/**
+ * The time, in seconds, for which each item is visible after its {@see Peak.end}.
+ */
+const DECAY_PERIOD = 0.5;
+
+/**
+ * The intensity of each light.
+ */
+const BASE_LIGHT_INTENSITY = 20;
+
+/**
+ * The distance over which each light attenuates.
+ */
+const BASE_LIGHT_DISTANCE = 20;
+
+/**
+ * The minimum radius from the center to use for each displayed peak.
+ */
+const MIN_DISTRIBUTION_RADIUS = 12;
+
+/**
+ * The maximum radius from the center to use for each displayed peak.
+ */
+const MAX_DISTRIBUTION_RADIUS = 20;
 
 function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
   let nextAvailableGroupIndex = 0;
   const availableTrebleGroupsRing = useRef<THREE.Group[]>([]);
-  const QUEUE_SIZE = 20;
-  const LOOKAHEAD_PERIOD = 0.1;
-  const DECAY_PERIOD = 0.5;
-  const PEAK_DEPTH_START = -200;
-  const PEAK_DEPTH_END = 10;
-  const BASE_LIGHT_INTENSITY = 20;
-  const BASE_LIGHT_DISTANCE = 20;
-  const MIN_DISTRIBUTION_RADIUS = 12;
-  const MAX_DISTRIBUTION_RADIUS = 20;
-
   const trackAnalysis = useStore(state => state.analysis);
   const trebleTheme = useStore(state => state.theme.treble);
   const spriteTexture = useTexture(trebleTheme.spriteTexture);
@@ -111,8 +137,7 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
     }
 
     // Now update the items in the ring buffer
-    for (let itemIdx = 0; itemIdx < availableTrebleGroupsRing.current.length; itemIdx++)
-    {
+    for (let itemIdx = 0; itemIdx < availableTrebleGroupsRing.current.length; itemIdx++) {
       const groupForPeak = availableTrebleGroupsRing.current[itemIdx];
       const peakData = groupForPeak.userData['peak'] as Peak;
 
@@ -133,7 +158,7 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
 
       // Make the group visible and lerp it to zoom in
       groupForPeak.visible = true;
-      groupForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, PEAK_DEPTH_START, PEAK_DEPTH_END);
+      groupForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, ComponentDepths.TrebleStart, ComponentDepths.TrebleEnd);
 
       // Fade the sprite opacity if we're in the lookahead/decay period
       const spriteForPeak = groupForPeak.children[0] as THREE.Sprite;

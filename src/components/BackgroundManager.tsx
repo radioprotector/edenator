@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 
 import { useStore } from '../store/visualizerStore';
+import { ComponentDepths } from './ComponentDepths';
 
 const FULL_RADIANS = 2 * Math.PI;
 
@@ -206,7 +207,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
       <mesh
         ref={horizonLayer}
         frustumCulled={false}
-        position={[0, 0, -300]}
+        position={[0, 0, ComponentDepths.SunFlash]}
         scale={[8, 0.125, 1]}
       >
         <planeGeometry
@@ -225,7 +226,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
       <group ref={ringGroup}>
         <lineSegments
           ref={firstLineRing}
-          position={[0, 0, -250]}
+          position={[0, 0, ComponentDepths.SunRing]}
           geometry={firstRingGeometry}
         >
           <lineBasicMaterial
@@ -238,7 +239,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         </lineSegments>
         <lineSegments
           ref={secondLineRing}
-          position={[0, 0, -250]}
+          position={[0, 0, ComponentDepths.SunRing]}
           geometry={secondRingGeometry}
         >
           <lineBasicMaterial
@@ -251,7 +252,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         </lineSegments>
         <lineSegments
           ref={thirdLineRing}
-          position={[0, 0, -250]}
+          position={[0, 0, ComponentDepths.SunRing]}
           geometry={thirdRingGeometry}
         >
           <lineBasicMaterial
@@ -266,7 +267,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
       <group>
         <mesh
           ref={firstStarGlowLayer}
-          position={[0, 0, -599]}
+          position={[0, 0, ComponentDepths.StarsLayer1 + 1]}
           scale={[2, 2, 1]}
           frustumCulled={false}
           geometry={backdropGeometry}
@@ -283,7 +284,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         </mesh>
         <mesh
           ref={firstStarLayer}
-          position={[0, 0, -600]}
+          position={[0, 0, ComponentDepths.StarsLayer1]}
           scale={[2, 2, 1]}
           frustumCulled={false}
           geometry={backdropGeometry}
@@ -300,7 +301,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
         <mesh
           ref={secondStarGlowLayer}
-          position={[0, 0, -699]}
+          position={[0, 0, ComponentDepths.StarsLayer2 + 1]}
           scale={[2, 2, 1]}
           frustumCulled={false}
           geometry={backdropGeometry}
@@ -317,7 +318,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         </mesh>
         <mesh
           ref={secondStarLayer}
-          position={[0, 0, -700]}
+          position={[0, 0, ComponentDepths.StarsLayer2]}
           scale={[2, 2, 1]}
           frustumCulled={false}
           geometry={backdropGeometry}
@@ -334,7 +335,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
         <mesh
           ref={thirdStarGlowLayer}
-          position={[0, 0, -799]}
+          position={[0, 0, ComponentDepths.StarsLayer3 + 1]}
           scale={[2, 2, 1]}
           frustumCulled={false}
           geometry={backdropGeometry}
@@ -351,7 +352,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         </mesh>
         <mesh
           ref={thirdStarLayer}
-          position={[0, 0, -800]}
+          position={[0, 0, ComponentDepths.StarsLayer3]}
           scale={[2, 2, 1]}
           frustumCulled={false}
           geometry={backdropGeometry}

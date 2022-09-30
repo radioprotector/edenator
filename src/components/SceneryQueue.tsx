@@ -3,11 +3,34 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
 import { useStore } from '../store/visualizerStore';
-import { generateNumericArray } from '../utils';
 import { TrackAnalysis } from '../store/TrackAnalysis';
 import Lull from '../store/Lull';
+import { generateNumericArray } from '../utils';
+import { ComponentDepths } from './ComponentDepths';
 
+/**
+ * The size of the scenery queue.
+ */
+const QUEUE_SIZE = 10;
+
+/**
+ * The base radius to use for scenery geometries.
+ */
 const BASE_RADIUS = 150;
+
+/**
+ * The x-offset to apply from the center for each scenery item.
+ */
+const HORIZ_OFFSET = BASE_RADIUS * 2.5;
+
+/**
+ * The y-offset to apply to each scenery item.
+ */
+const VERT_OFFSET = -10;
+
+/**
+ * A vector to use when no translation is required.
+ */
 const NO_TRANSLATION = new THREE.Vector3(0, 0, 0);
 
 /**
@@ -96,12 +119,6 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
   let nextUnrenderedLullIndex = 0;
   let nextAvailableMeshIndex = 0;
   const availableSceneryMeshesRing = useRef<THREE.Mesh[]>([]);
-  const QUEUE_SIZE = 10;
-  const SCENERY_DEPTH_START = -1000;
-  const SCENERY_DEPTH_END = 0;
-  const HORIZ_OFFSET = BASE_RADIUS * 2.5;
-  const VERT_OFFSET = -10;
-
   const trackAnalysis = useStore(state => state.analysis);
 
   // Make the lookahead period variable based on measure lengths
@@ -116,7 +133,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         key={index}
         visible={false}
         ref={(m: THREE.Mesh) => availableSceneryMeshesRing.current[index] = m}
-        position={[HORIZ_OFFSET, VERT_OFFSET, SCENERY_DEPTH_START]}
+        position={[HORIZ_OFFSET, VERT_OFFSET, ComponentDepths.SceneryStart]}
       />
     });
 
@@ -244,8 +261,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
     }
 
     // Now update the items in the ring buffer
-    for (let itemIdx = 0; itemIdx < availableSceneryMeshesRing.current.length; itemIdx++)
-    {
+    for (let itemIdx = 0; itemIdx < availableSceneryMeshesRing.current.length; itemIdx++) {
       const meshForLull = availableSceneryMeshesRing.current[itemIdx];
       const lullData = meshForLull.userData['lull'] as Lull;
 
@@ -266,7 +282,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
       // Make the mesh visible and lerp it to zoom in
       meshForLull.visible = true;
-      meshForLull.position.z = THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullDisplayEnd, SCENERY_DEPTH_START, SCENERY_DEPTH_END);
+      meshForLull.position.z = THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullDisplayEnd, ComponentDepths.SceneryStart, ComponentDepths.SceneryEnd);
 
       // Scale the mesh based on audio data, but apply easing factors in either direction to minimize suddenness
       const easedDownXScale = meshForLull.scale.x * 0.995;

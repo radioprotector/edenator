@@ -4,27 +4,45 @@ import { useFrame } from '@react-three/fiber';
 
 import { generateNumericArray } from '../utils';
 import { useStore } from '../store/visualizerStore';
+import { ComponentDepths } from './ComponentDepths';
 
 /**
  * The material to use for all frequency lines.
  */
 const frequencyLineMaterial = new THREE.LineBasicMaterial();
 
+/**
+ * The number of frequency rows to display.
+ */
+const FREQUENCY_ROWS: number = 10;
+
+/**
+ * The z-spacing between each row.
+ */
+const DEPTH_SPACING: number = -20;
+
+/**
+ * The number of frequency buckets to render out for each row.
+ */
+const LINE_BUCKETS: number = 64; // XXX: Must be equal to analyzer.frequencyBinCount
+
+/**
+ * The x-width of each frequency bucket.
+ */
+const BUCKET_WIDTH: number = 0.5;
+
+/**
+ * The y-height of each frequency bucket.
+ */
+const BUCKET_HEIGHT: number = 5.0;
+
+/**
+ * The number of anchor points to use on each end. This is used to avoid "cliffs"
+ * caused by large magnitudes of either the extremely low or extremely high frequencies.
+ */
+const ANCHOR_POINTS: number = 8;
+
 function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
-  // Track how many rows we have, where the first row starts, depth-wise, and the spacing between each row  
-  const FREQUENCY_ROWS: number = 10;
-  const STARTING_DEPTH: number = -10;
-  const DEPTH_SPACING: number = -20;
-
-  // XXX: LINE_BUCKETS should be equal to analyzer.frequencyBinCount
-  const LINE_BUCKETS = 64;
-  const BUCKET_WIDTH = 0.5;
-  const BUCKET_HEIGHT = 5.0;
-
-  // On either end, we want a set number of points to ease down the minimum/maximum frequencies to 0
-  // and avoid sharp cliffs
-  const ANCHOR_POINTS = 8;
-
   // Pull our store items
   const trackAnalysis = useStore(state => state.analysis);
 
@@ -80,7 +98,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   const rowElements = useMemo(() => {
     return generateNumericArray(FREQUENCY_ROWS).map((rowIndex) => {
       const line = new THREE.Line(frequencyGeometry, frequencyLineMaterial);
-      line.position.set(0, -10, STARTING_DEPTH + (DEPTH_SPACING * rowIndex));
+      line.position.set(0, -10, ComponentDepths.FrequencyEnd + (DEPTH_SPACING * rowIndex));
       line.scale.set(0.6, THREE.MathUtils.mapLinear(rowIndex, 0, FREQUENCY_ROWS - 1, 1.0, 0.1), 1.0);
 
       // Ensure the line is stored in a mesh
@@ -92,9 +110,9 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
         key={rowIndex}
       />
     })
-    }, [frequencyGeometry, STARTING_DEPTH, DEPTH_SPACING, FREQUENCY_ROWS]);
+    }, [frequencyGeometry]);
 
-  useFrame((state, delta) => {
+  useFrame(() => {
     if (props.analyser.current === null || props.audio.current === null) {
       return;
     }
@@ -135,9 +153,9 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
 
     // Update all of the rows
     for(let rowIndex = 0; rowIndex < rowLines.current.length; rowIndex++) {
-      // Apply the point set to all line rows
+      // Apply the point set to all line rows, going front-to-back
       const lineRow = rowLines.current[rowIndex];
-      const baseDepth = STARTING_DEPTH + (DEPTH_SPACING * rowIndex);
+      const baseDepth = ComponentDepths.FrequencyEnd + (DEPTH_SPACING * rowIndex);
 
       // Hide all line rows when we don't have a track analysis
       lineRow.visible = !trackAnalysis.isEmpty;

@@ -5,15 +5,34 @@ import { useFrame } from '@react-three/fiber';
 import { generateNumericArray } from '../utils';
 import { TrackAnalysis } from '../store/TrackAnalysis';
 import { useStore } from '../store/visualizerStore';
+import { ComponentDepths } from './ComponentDepths';
 
 const QUARTER_TURN = Math.PI / 2;
 
+/**
+ * The z-depth of each segment.
+ */
 const SEGMENT_DEPTH = 5;
+
+/**
+ * The x-width of each segment.
+ */
 const SEGMENT_WIDTH = 2;
+
+/**
+ * The x-offset to apply from the center for each segment.
+ */
+const HORIZ_OFFSET = 12;
+
+/**
+ * The y-height of each segment.
+ */
 const SEGMENT_HEIGHT = 15;
 
+/**
+ * The number of segments to use on either side of the tunnel.
+ */
 const SEGMENTS_PER_SIDE = 20;
-const START_DEPTH = SEGMENT_DEPTH;
 
 // When we normally try to display a standard box geometry using wireframes,
 // it will display each side using two triangles. We want pure lines,
@@ -172,11 +191,10 @@ function randomizeTunnelSegment(segmentIndex: number, segment: THREE.Group, plan
 }
 
 function getDepthForSegment(segmentIndex: number): number {
-  return START_DEPTH - (SEGMENT_DEPTH * (segmentIndex % SEGMENTS_PER_SIDE))
+  return ComponentDepths.TunnelEnd - (SEGMENT_DEPTH * (segmentIndex % SEGMENTS_PER_SIDE))
 }
 
 function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
-  const HORIZ_OFFSET = 12;
   let nextBassIndex = 0;
   let nextSubBassIndex = 0;
   

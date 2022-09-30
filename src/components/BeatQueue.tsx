@@ -5,6 +5,22 @@ import { useFrame } from '@react-three/fiber';
 import { useStore } from '../store/visualizerStore';
 import { generateNumericArray } from '../utils';
 import Peak from '../store/Peak';
+import { ComponentDepths } from './ComponentDepths';
+
+/**
+ * The time, in seconds, for which each item is visible before its {@see Peak.time}.
+ */
+ const LOOKAHEAD_PERIOD = 1.5;
+
+ /**
+  * The time, in seconds, for which each item is visible after its {@see Peak.end}.
+  */
+ const DECAY_PERIOD = 0.25;
+
+ /**
+  * The radius from the center to use for each displayed peak.
+  */
+ const DISTRIBUTION_RADIUS: number = 5;
 
 function getBasePosition(sideIdx: number, totalSides: number, scale: number): THREE.Vector3 {
   // Modulo the side index so that we'll always get a value that maps within [0, 360) degree range
@@ -33,11 +49,6 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextAvailableMeshIndex = 0;
   const availableMeshesRing = useRef<THREE.Mesh[]>([]);
   const SIDES = 6;
-  const RADIUS = 5;
-  const LOOKAHEAD_PERIOD = 1.5;
-  const DECAY_PERIOD = 0.25;
-  const PEAK_DEPTH_START = -200;
-  const PEAK_DEPTH_END = -10;
 
   const trackAnalysis = useStore(state => state.analysis);
 
@@ -58,7 +69,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
         key={sideNumber}
         ref={(mesh: THREE.Mesh) => availableMeshesRing.current[sideNumber] = mesh}
         visible={false}
-        position={getBasePosition(sideNumber, SIDES, RADIUS)}
+        position={getBasePosition(sideNumber, SIDES, DISTRIBUTION_RADIUS)}
         geometry={beatGeometry}
         material={beatMeshMaterial}
       />
@@ -114,8 +125,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
     }
 
     // Now update the items in the ring buffer
-    for (let meshForPeak of availableMeshesRing.current)
-    {
+    for (let meshForPeak of availableMeshesRing.current) {
       const peakData = meshForPeak.userData['peak'] as Peak;
 
       if (peakData === null || peakData === undefined) {
@@ -135,7 +145,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
 
       // Make the mesh visible and lerp it to zoom in
       meshForPeak.visible = true;
-      meshForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, PEAK_DEPTH_START, PEAK_DEPTH_END);
+      meshForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, ComponentDepths.BeatStart, ComponentDepths.BeatEnd);
 
       // Tweak scaling if we're during the actual beat
       if (audioTime >= peakData.time && audioTime < peakDisplayEnd) {
