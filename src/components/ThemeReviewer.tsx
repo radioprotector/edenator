@@ -141,7 +141,7 @@ function ThemeReviewer(): JSX.Element {
                 scope="col"
                 className="group-end"
               >
-                Light
+                <s>Light</s>
               </th>
               {/* Background */}
               <th scope="col">
