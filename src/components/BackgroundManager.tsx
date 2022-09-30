@@ -12,11 +12,14 @@ function buildLineRingGeometry(innerRadius: number, maxOuterRadius: number, pert
   const points: THREE.Vector3[] = [];
   const LINE_COUNT = 120;
   const ANGLE_PER_LINE = 360 / LINE_COUNT;
+  // Assign a symmetric-ish curve to scale extra lengths by. LINE_COUNT should be divisible by this.
+  const EXTRA_LENGTH_VALUES = [0.0809, 0.1618, 0.3236, 0.5, 0.6764, 0.8382, 0.8382, 0.6764, 0.5, 0.3236, 0.1618, 0.0809];
+  const EXTRA_LENGTH_BUCKETS = EXTRA_LENGTH_VALUES.length;
   const extraLength = Math.max(maxOuterRadius - innerRadius, 1);
 
   for (let pointNum = 0; pointNum < LINE_COUNT; pointNum++) {
     const angle = ((pointNum * ANGLE_PER_LINE) + perturbAngle) * THREE.MathUtils.DEG2RAD;
-    const outerRadius = innerRadius + (((Math.sin(pointNum * innerRadius) + 1) * extraLength) / 2);
+    const outerRadius = innerRadius + (extraLength * EXTRA_LENGTH_VALUES[pointNum % EXTRA_LENGTH_BUCKETS]);
     const x = Math.cos(angle);
     const y = Math.sin(angle);
 
@@ -32,7 +35,7 @@ function buildLineRingGeometry(innerRadius: number, maxOuterRadius: number, pert
 /**
  * A geometry that is intended to act as a backdrop for the entire scene.
  */
-const backdropGeometry = new THREE.PlaneGeometry(2048, 2048);
+const backdropGeometry = new THREE.PlaneGeometry(4096, 4096);
 
 function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Load background textures
@@ -67,15 +70,15 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
   // Set up the geometry for the line "rings"
   const firstRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(100, 120, 0);
+    return buildLineRingGeometry(300, 390, 0);
   }, []);
 
   const secondRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(125, 145, 15);
+    return buildLineRingGeometry(400, 490, 15);
   }, []);
 
   const thirdRingGeometry = useMemo(() => {
-    return buildLineRingGeometry(150, 170, 30);
+    return buildLineRingGeometry(500, 590, 30);
   }, []);
 
   // Determine motion amounts based on the BPM
@@ -113,7 +116,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
       currentTrackDuration = props.audio.current.duration;
     }
 
-    // Rotate the line "rings" over time
+    // Rotate the line "rings" over time, each of which gets a different scale
     const ringPercentage = (currentTrackTime % ringCycleSeconds) / ringCycleSeconds;
     const ringRotation = Math.sin(ringPercentage * FULL_RADIANS);
 
@@ -186,7 +189,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     (secondStarGlowLayer.current.material as THREE.Material).opacity = newStarGlowOpacity;
     (thirdStarGlowLayer.current.material as THREE.Material).opacity = newStarGlowOpacity;
 
-    // Scale the rings based on our frequency-0driven factor
+    // Scale the rings based on our frequency-driven factor
     // If we are just coming off of an increase in scale, we want to ease back to the standard 1.0
     const ringDampenedScale = firstLineRing.current.scale.x * 0.9;
     const newRingScale = Math.max(1.0 + ringScaleFactor, ringDampenedScale);
@@ -197,7 +200,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
     // Make the rings appear closer as we get closer to the end of the track
     if (Number.isFinite(currentTrackDuration) && currentTrackDuration > 0) {
-      const ringGroupScale = THREE.MathUtils.mapLinear(currentTrackTime, 0, currentTrackDuration, 0.5, 1.5);
+      const ringGroupScale = THREE.MathUtils.mapLinear(currentTrackTime, 0, currentTrackDuration, 1, 2.5);
       ringGroup.current.scale.x = ringGroup.current.scale.y = ringGroupScale;
     }
   })
@@ -208,7 +211,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
         ref={horizonLayer}
         frustumCulled={false}
         position={[0, 0, ComponentDepths.SunFlash]}
-        scale={[8, 0.125, 1]}
+        scale={[8, 0.5, 1]}
       >
         <planeGeometry
           args={[1024, 512]}

@@ -22,7 +22,7 @@ const sunMaterial = new THREE.MeshBasicMaterial({ transparent: true });
  * The mesh to use for the sun.
  * Used to simplify ref-passing for the VFX manager.
  */
-const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(5), sunMaterial);
+const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(35), sunMaterial);
 sunMesh.frustumCulled = false;
 sunMesh.position.set(0, 0, ComponentDepths.Sun);
 

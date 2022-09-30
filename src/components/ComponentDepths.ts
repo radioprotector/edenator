@@ -29,10 +29,10 @@ export const ComponentDepths = {
   TrebleEnd: 10,
   SceneryStart: -1000,
   SceneryEnd: 0,
-  Sun: -200,
-  SunRing: -250,
-  SunFlash: -300,
-  StarsLayer1: -600,
-  StarsLayer2: -700,
-  StarsLayer3: -800
+  Sun: -1500,
+  SunFlash: -1500,
+  SunRing: -1600,
+  StarsLayer1: -1700,
+  StarsLayer2: -1800,
+  StarsLayer3: -1900
 } as const;

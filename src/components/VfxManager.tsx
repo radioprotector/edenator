@@ -49,7 +49,7 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
         <GodRays
           ref={godRaysEffect}
           sun={props.sunMesh}
-          blur={10}
+          blur={25}
           blendFunction={BlendFunction.Screen}
           samples={60}
           density={0.85}
@@ -59,7 +59,7 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
           clampMax={1}
           width={Resizer.AUTO_SIZE}
           height={Resizer.AUTO_SIZE}
-          kernelSize={KernelSize.MEDIUM}
+          kernelSize={KernelSize.LARGE}
         />
       </EffectComposer>}
     </group>
