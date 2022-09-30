@@ -12,24 +12,25 @@
   },
   "private": true,
   "dependencies": {
-    "@react-three/drei": "^8.3.1",
-    "@react-three/fiber": "^7.0.21",
-    "@react-three/postprocessing": "^2.0.5",
-    "@types/node": "^12.20.37",
-    "@types/react": "^17.0.37",
-    "@types/react-dom": "^17.0.11",
+    "@react-spring/three": "^9.5.5",
+    "@react-three/drei": "^9.32.4",
+    "@react-three/fiber": "^8.8.7",
+    "@react-three/postprocessing": "^2.6.2",
+    "@types/node": "^18.7.23",
+    "@types/react": "^18.0.21",
+    "@types/react-dom": "^18.0.6",
     "env-cmd": "^10.1.0",
-    "gh-pages": "^3.2.3",
-    "jsmediatags": "^3.9.3",
-    "postprocessing": "^6.23.3",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-scripts": "4.0.3",
-    "styled-components": "^5.3.3",
-    "three": "^0.135.0",
-    "typescript": "^4.5.2",
-    "web-vitals": "^1.1.2",
-    "zustand": "^3.6.8"
+    "gh-pages": "^4.0.0",
+    "jsmediatags": "3.9.3",
+    "postprocessing": "^6.28.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "^5.0.1",
+    "styled-components": "^5.3.6",
+    "three": "^0.144.0",
+    "typescript": "^4.8.4",
+    "web-vitals": "^3.0.2",
+    "zustand": "^4.1.1"
   },
   "scripts": {
     "predeploy": "npm run build",
@@ -60,8 +61,8 @@
     ]
   },
   "devDependencies": {
-    "@types/jsmediatags": "^3.9.3",
-    "@types/styled-components": "^5.1.19",
-    "@types/three": "^0.135.0"
+    "@types/jsmediatags": "3.9.3",
+    "@types/styled-components": "^5.1.26",
+    "@types/three": "^0.144.0"
   }
 }

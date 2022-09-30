@@ -68,17 +68,20 @@ function AppStyles(): JSX.Element {
 
   // Because we want to make this a reactive component, we can't manually use something like createGlobalStyle,
   // which handles component generation.
+  const cssRules = css`
+  html {
+    --ui-color-text: ${uiTheme.textColor.getStyle()};
+    --ui-color-contrast: ${uiTheme.backgroundColor.getStyle()};
+    --ui-color-contrast-disabled: ${uiTheme.disabledBackgroundColor.getStyle()};
+    --ui-color-contrast-focus: ${uiTheme.focusBackgroundColor.getStyle()};
+    --ui-color-border: ${uiTheme.borderColor.getStyle()};
+  }`;
+  // console.trace(cssRules);
+
+  // Join the different CSS rules as a straight-up concatenation
   return (
-    <style
-      type="text/css">
-      {css`
-        html {
-          --ui-color-text: ${uiTheme.textColor.getStyle()};
-          --ui-color-contrast: ${uiTheme.backgroundColor.getStyle()};
-          --ui-color-contrast-disabled: ${uiTheme.disabledBackgroundColor.getStyle()};
-          --ui-color-contrast-focus: ${uiTheme.focusBackgroundColor.getStyle()};
-          --ui-color-border: ${uiTheme.borderColor.getStyle()};
-      }`}
+    <style type="text/css">
+      {cssRules.join('')}
     </style>
   );
 }

@@ -15,7 +15,7 @@ import VfxManager from './VfxManager';
 /**
  * The material to use for the sun.
  */
-const sunMaterial = new THREE.MeshBasicMaterial({ transparent: true, fog: false });
+const sunMaterial = new THREE.MeshBasicMaterial({ transparent: true });
 
 /**
  * The mesh to use for the sun.

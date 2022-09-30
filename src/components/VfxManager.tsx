@@ -7,7 +7,7 @@ import { BloomEffect, GodRaysEffect, BlendFunction, Resizer, KernelSize } from '
 function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }): JSX.Element {
   const bloomEffect = useRef<typeof BloomEffect>(null!);
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
-  const isInVr = useThree((state) => state.vr);
+  const isInVr = useThree((state) => state.gl.xr.enabled);
   
   useFrame(() => {
     if (props.audio.current === null || props.audio.current.currentTime <= 0 || props.analyser.current === null || godRaysEffect.current === null) {
@@ -39,7 +39,7 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
       {!isInVr && <EffectComposer>
         <Bloom
           ref={bloomEffect}
-          intensity={1}
+          intensity={0.85}
           width={Resizer.AUTO_SIZE}
           height={Resizer.AUTO_SIZE}
           kernelSize={KernelSize.MEDIUM}

@@ -1,5 +1,5 @@
-import create, { GetState, SetState } from 'zustand';
-import { StoreApiWithSubscribeWithSelector, subscribeWithSelector } from 'zustand/middleware'
+import create from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware'
 
 import { EmptyTrackAnalysis, TrackAnalysis } from './TrackAnalysis';
 import { defaultTheme, Theme } from './themes';
@@ -27,17 +27,12 @@ interface VisualizerState {
   indicateAudioSeeked: () => void;
 }
 
-export const useStore = create<
-  VisualizerState,
-  SetState<VisualizerState>,
-  GetState<VisualizerState>,
-  StoreApiWithSubscribeWithSelector<VisualizerState>
->(subscribeWithSelector((set) => ({
+export const useStore = create<VisualizerState>()(subscribeWithSelector((set) => ({
   analysis: EmptyTrackAnalysis,
   theme: defaultTheme,
   audioLastSeeked: 0,
 
-  setAnalysis: (newAnalysis) => set(state => { state.analysis = newAnalysis }),
-  setTheme: (newTheme) => set(state => { state.theme = newTheme }),
-  indicateAudioSeeked: () => set(state => { state.audioLastSeeked = Date.now() })
+  setAnalysis: (newAnalysis) => set({ analysis: newAnalysis }),
+  setTheme: (newTheme) => set({ theme: newTheme }),
+  indicateAudioSeeked: () => set({ audioLastSeeked: Date.now() })
 })));
