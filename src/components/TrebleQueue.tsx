@@ -74,7 +74,9 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
             blendDst={THREE.OneFactor}
           />
         </sprite>
+        {/* Disable the point light for now */}
         <pointLight
+          visible={false}
           color={trebleTheme.lightColor}
           castShadow={false}
           distance={BASE_LIGHT_DISTANCE}
@@ -162,23 +164,23 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
 
       // Fade the sprite opacity if we're in the lookahead/decay period
       const spriteForPeak = groupForPeak.children[0] as THREE.Sprite;
-      const lightForPeak = groupForPeak.children[1] as THREE.PointLight;
+      // const lightForPeak = groupForPeak.children[1] as THREE.PointLight;
 
       if (audioTime < peakData.time) {
         const scale = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakData.time, 0, 1);
 
         spriteForPeak.material.opacity = scale;
-        lightForPeak.intensity = BASE_LIGHT_INTENSITY * scale;
+        // lightForPeak.intensity = BASE_LIGHT_INTENSITY * scale;
       }
       else if (audioTime > peakData.end) {
         const scale = THREE.MathUtils.mapLinear(audioTime, peakData.end, peakDisplayEnd, 1, 0);
 
         spriteForPeak.material.opacity = scale;
-        lightForPeak.intensity = BASE_LIGHT_INTENSITY * scale;
+        // lightForPeak.intensity = BASE_LIGHT_INTENSITY * scale;
       }
       else {
         spriteForPeak.material.opacity = 1;
-        lightForPeak.intensity = BASE_LIGHT_INTENSITY;
+        // lightForPeak.intensity = BASE_LIGHT_INTENSITY;
       }
     }
   });
