@@ -1,6 +1,7 @@
 import { RefObject, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
+import { XR } from '@react-three/xr';
 
 import { useStore } from '../store/visualizerStore';
 import { ComponentDepths } from './ComponentDepths';
@@ -38,17 +39,23 @@ function Visualizer(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
     []);
 
   return (
-    <Canvas camera={{position: [0, 0, ComponentDepths.CameraPosition], far: ComponentDepths.CameraFrustrumFar}}>
-      <ambientLight intensity={0.1} />
-      <directionalLight position={[0, 0, ComponentDepths.LightPosition]} />
-      <primitive object={sunMesh} />
-      <BassTunnel audio={props.audio} />
-      <BeatQueue audio={props.audio} />
-      <FrequencyGrid audio={props.audio} analyser={props.analyser} />
-      <TrebleQueue audio={props.audio} />
-      <SceneryQueue audio={props.audio} analyser={props.analyser} />
-      <BackgroundManager audio={props.audio} analyser={props.analyser} />
-      <VfxManager audio={props.audio} analyser={props.analyser} sunMesh={sunMesh} />
+    <Canvas
+      camera={{position: [0, 0, ComponentDepths.CameraPosition], far: ComponentDepths.CameraFrustrumFar}}
+      gl={{ physicallyCorrectLights: true }}>
+      <XR
+        referenceSpace="viewer"
+      >
+        <ambientLight intensity={0.1} />
+        <directionalLight position={[0, 0, ComponentDepths.LightPosition]} />
+        <primitive object={sunMesh} />
+        <BassTunnel audio={props.audio} />
+        <BeatQueue audio={props.audio} />
+        <FrequencyGrid audio={props.audio} analyser={props.analyser} />
+        <TrebleQueue audio={props.audio} />
+        <SceneryQueue audio={props.audio} analyser={props.analyser} />
+        <BackgroundManager audio={props.audio} analyser={props.analyser} />
+        <VfxManager audio={props.audio} analyser={props.analyser} sunMesh={sunMesh} />
+      </XR>
     </Canvas>
   );
 }

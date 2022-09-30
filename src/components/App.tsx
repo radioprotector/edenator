@@ -1,5 +1,6 @@
-import React, { useRef, useCallback, useEffect, Suspense, useState } from 'react';
+import { useRef, useCallback, useEffect, Suspense, useState } from 'react';
 import { Stats } from '@react-three/drei';
+import { VRButton } from '@react-three/xr';
 
 import { analyzeTrack } from '../store/analyzer';
 import { useStore } from '../store/visualizerStore';
@@ -269,6 +270,10 @@ function App(): JSX.Element {
           onChange={selectedFileChange}
         />
       </div>
+      <VRButton
+        id="VRButton"
+        sessionInit={{ optionalFeatures: [] }}
+      />
       <button
         type="button"
         id="themeCycler"

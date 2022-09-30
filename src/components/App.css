@@ -110,3 +110,12 @@ button.btn:focus {
   font-size: inherit;
   text-decoration: underline;
 }
+
+#VRButton {
+  position: fixed !important;
+  z-index: 10 !important;
+  top: 5vh !important;
+  width: 10vw !important;
+  height: 4vh !important;
+  bottom: initial !important;
+}
