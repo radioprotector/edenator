@@ -39,7 +39,7 @@ const NO_TRANSLATION = new THREE.Vector3(0, 0, 0);
 const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Vector3][] = [
   [
     new THREE.ConeGeometry(BASE_RADIUS, BASE_RADIUS * 3, undefined, undefined, true),
-    new THREE.Vector3(0, BASE_RADIUS, 0)
+    NO_TRANSLATION
   ],
   [
     // The top half of a sphere - make sure we move it down so it's flush
@@ -123,7 +123,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
   // Make the lookahead period variable based on measure lengths
   const lookaheadPeriod = useMemo(() => {
-    return trackAnalysis.secondsPerMeasure * 2;
+    return trackAnalysis.secondsPerMeasure;
   }, [trackAnalysis]);
 
   // Generate available sprites for use in a ring buffer
@@ -284,18 +284,26 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       meshForLull.visible = true;
       meshForLull.position.z = THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullDisplayEnd, ComponentDepths.SceneryStart, ComponentDepths.SceneryEnd);
 
-      // Scale the mesh based on audio data, but apply easing factors in either direction to minimize suddenness
-      const easedDownXScale = meshForLull.scale.x * 0.995;
-      const easedDownYScale = meshForLull.scale.y * 0.995;
-      const easedDownZScale = meshForLull.scale.z * 0.995;
-      const easedUpXScale = meshForLull.scale.x * 1.0025;
-      const easedUpYScale = meshForLull.scale.y * 1.0025;
-      const easedUpZScale = meshForLull.scale.z * 1.0025;
+      // If we're in the lookahead period, scale the geometry in so it doesn't pop quite so aggressively.
+      // Otherwise, scale based on audio data.
+      if (audioTime < lullData.time) {
+        const fadeInScale = THREE.MathUtils.smoothstep(THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullData.time, 0, 1), 0, 1);
+        meshForLull.scale.set(1, fadeInScale, 1);
+      }
+      else {
+        // When scaling based on audio values, apply easing factors in either direction to minimize suddenness
+        const easedDownXScale = meshForLull.scale.x * 0.995;
+        const easedDownYScale = meshForLull.scale.y * 0.995;
+        const easedDownZScale = meshForLull.scale.z * 0.995;
+        const easedUpXScale = meshForLull.scale.x * 1.0025;
+        const easedUpYScale = meshForLull.scale.y * 1.0025;
+        const easedUpZScale = meshForLull.scale.z * 1.0025;
 
-      meshForLull.scale.set(
-        Math.max(easedDownXScale, Math.min(easedUpXScale, 1.0 + widthAndDepthScalingFactor)),
-        Math.max(easedDownYScale, Math.min(easedUpYScale, 1.0 + verticalScalingFactor)),
-        Math.max(easedDownZScale, Math.min(easedUpZScale, 1.0 + widthAndDepthScalingFactor)));
+        meshForLull.scale.set(
+          Math.max(easedDownXScale, Math.min(easedUpXScale, 1.0 + widthAndDepthScalingFactor)),
+          Math.max(easedDownYScale, Math.min(easedUpYScale, 1.0 + verticalScalingFactor)),
+          Math.max(easedDownZScale, Math.min(easedUpZScale, 1.0 + widthAndDepthScalingFactor)));
+      }
     }
   });
 
