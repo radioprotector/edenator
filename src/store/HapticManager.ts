@@ -3,6 +3,15 @@ import Lull from "./Lull";
 import Peak from "./Peak";
 
 /**
+ * Describes the result of controller detection.
+ */
+export enum ControllerDetectionResult {
+  Detected,
+  NotDetected,
+  VibrationMissing
+}
+
+/**
  * Handles controller detection and haptic feedback
  * {@see https://github.com/luser/gamepadtest}
  */
@@ -64,12 +73,8 @@ export class HapticManager {
       console.log('gamepad connected', gamepad);
     } 
 
-    // Add this to the list if it has any actuators
-    if (this.getActuatorsForGamepad(gamepad).length > 0) {
-      this.gamepads[event.gamepad.index] = event.gamepad;
-
-      window.dispatchEvent(new CustomEvent(HapticManager.ChangeEventName));
-    }
+    this.gamepads[event.gamepad.index] = event.gamepad;
+    window.dispatchEvent(new CustomEvent(HapticManager.ChangeEventName));
   };
 
   private handleGamepadDisconnected = (event: GamepadEvent): void => {
@@ -87,19 +92,30 @@ export class HapticManager {
 
   /**
    * Determines whether there is at least one gamepad that supports haptic feedback.
-   * @returns True if at least one gamepad supports haptic feedback; otherwise, false.
+   * @returns The results of the detection.
    */
-  public hasEligibleGamepad(): boolean {
+  public checkEligibleGamepad(): ControllerDetectionResult {
+    let result = ControllerDetectionResult.NotDetected;
+
     // See if there are any available gamepads
     for (const gamepad of this.gamepads) {
+      // Make sure this gamepad is non-null and connected
+      if (!gamepad || !gamepad.connected) {
+        continue;
+      }
+
+      // If we got this far, we at least know that a gamepad was detected, but we don't know if it supports vibration yet
+      result = ControllerDetectionResult.VibrationMissing;
+
+      // Look for at least one available actuator
       const gamepadActuators = this.getActuatorsForGamepad(gamepad);
 
       if (gamepadActuators.length > 0) {
-        return true;
+        return ControllerDetectionResult.Detected;
       }
     }
 
-    return false;
+    return result;
   }
 
   /**
