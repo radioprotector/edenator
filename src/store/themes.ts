@@ -2,6 +2,31 @@ import * as THREE from 'three';
 import { OpenKey, TrackAnalysis } from './TrackAnalysis';
 
 /**
+ * 360 degrees expressed as radians.
+ */
+ const FULL_RADIANS = 2 * Math.PI;
+
+/**
+ * Contains theming information relevant to the BeatQueue component.
+ */
+export interface BeatTheme {
+  /**
+   * The color to use for incoming beat peaks.
+   */
+  color: THREE.Color;
+
+  /**
+   * The number of sides to use for the beat pattern arrangement.
+   */
+  sides: number,
+
+  /**
+   * The offset, in radians, to use for successive "layers" of beat patterns.
+   */
+  radiansOffset: number[],
+}
+
+/**
  * A theme to use for the visualizer.
  */
 export interface Theme {
@@ -25,12 +50,7 @@ export interface Theme {
   /**
    * Contains theming information relevant to the BeatQueue component.
    */
-  beat: {
-    /**
-     * The color to use for incoming beat peaks.
-     */
-    color: THREE.Color;
-  },
+  beat: BeatTheme,
 
   /**
    * Contains theming information relevant to the TrebleQueue component.
@@ -187,7 +207,9 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
       panelColor: new THREE.Color(tertiaryColor)
     },
     beat: {
-      color: new THREE.Color(baseColor)
+      color: new THREE.Color(baseColor),
+      sides: 6,
+      radiansOffset: [0, FULL_RADIANS / 12] // Alternate between 0 degrees and 30 degrees adjustment
     },
     treble: {
       spriteColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.65),
@@ -232,6 +254,19 @@ const pinkTheme = generateThemeForColor('pink', new THREE.Color(0xff99cc), new T
 const hotdogStandTheme = generateThemeForColor('hotdog stand', new THREE.Color(0xff0000), new THREE.Color(0xffff00));
 const fluorescentTheme = generateThemeForColor('fluorescent', new THREE.Color(0xff00ff), new THREE.Color(0x00ff00));
 const plasmaPowerSaverTheme = generateThemeForColor('plasma power saver', new THREE.Color(0x0000ff), new THREE.Color(0xff00ff), new THREE.Color(0xcc0066));
+
+// Change certain themes to use 5 or 8 sides for the beat patterns
+[redTheme, orangeTheme, fluorescentTheme].forEach((theme) => {
+  // For 5 sides, alternate between 90 degrees (to align the tip of the star with [0, 1]) and 45 degrees
+  theme.beat.sides = 5;
+  theme.beat.radiansOffset = [FULL_RADIANS / 4, FULL_RADIANS / 8];
+});
+
+[midBlueTheme, yellowGreenTheme, hotdogStandTheme].forEach((theme) => {
+  // For 8 sides, alternate between 0 degrees and 15 degrees
+  theme.beat.sides = 8;
+  theme.beat.radiansOffset = [0, FULL_RADIANS / 24];
+});
 
 /**
  * An array of all themes that can be assigned randomly by getThemeForTrack.

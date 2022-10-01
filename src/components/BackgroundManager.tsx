@@ -6,6 +6,9 @@ import { useTexture } from '@react-three/drei';
 import { useStore } from '../store/visualizerStore';
 import { ComponentDepths } from './ComponentDepths';
 
+/**
+ * 360 degrees expressed as radians.
+ */
 const FULL_RADIANS = 2 * Math.PI;
 
 function buildLineRingGeometry(innerRadius: number, maxOuterRadius: number, perturbAngle: number): THREE.BufferGeometry {

@@ -3,9 +3,19 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
 import { useStore } from '../store/visualizerStore';
-import { generateNumericArray } from '../utils';
+import { BeatTheme } from '../store/themes';
 import Peak from '../store/Peak';
 import { ComponentDepths } from './ComponentDepths';
+
+/**
+ * 360 degrees expressed as radians.
+ */
+ const FULL_RADIANS = 2 * Math.PI;
+
+ /**
+ * The size of the beat queue.
+ */
+const QUEUE_SIZE = 45;
 
 /**
  * The time, in seconds, for which each item is visible before its {@see Peak.time}.
@@ -22,16 +32,27 @@ import { ComponentDepths } from './ComponentDepths';
   */
  const DISTRIBUTION_RADIUS: number = 5;
 
-function getBasePosition(sideIdx: number, totalSides: number, scale: number): THREE.Vector3 {
+function getBasePosition(sideIdx: number, beatTheme: BeatTheme): { x: number, y: number } {
   // Modulo the side index so that we'll always get a value that maps within [0, 360) degree range
-  let angle = ((sideIdx % totalSides) / totalSides) * 2 * Math.PI;
+  let angle = ((sideIdx % beatTheme.sides) / beatTheme.sides) * FULL_RADIANS;
 
-  // For alternating sets, further perturb the angle
-  if (Math.ceil(sideIdx / totalSides) % 2 === 0) {
-    angle += Math.PI / totalSides;
-  } 
+  // Determine the layer index, map that to the offset array, and further perturb the angle based on that
+  if (beatTheme.radiansOffset.length > 1) {
+    // The way this works is, given six sides and two "radians offset" entries:
+    // Indices 0-5 should apply radiansOffset[0]
+    // Indices 6-11 should apply radiansOffset[1]
+    // Indices 12-17 should apply radiansOffset[0]
+    // and so on
+    let layerIndex = Math.floor(sideIdx / beatTheme.sides) % beatTheme.radiansOffset.length;
 
-  return new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(scale);
+    angle += beatTheme.radiansOffset[layerIndex];
+  }
+  else if (beatTheme.radiansOffset.length === 1) {
+    // Apply a fixed adjustment
+    angle += beatTheme.radiansOffset[0];
+  }
+
+  return new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(DISTRIBUTION_RADIUS);
 }
 
 /**
@@ -44,38 +65,52 @@ const beatGeometry = new THREE.SphereGeometry();
  */
 const beatMeshMaterial = new THREE.MeshPhongMaterial({ shininess: 0.5 });
 
+/**
+ * The ring buffer of available beat meshes.
+ */
+const availableMeshesRing: THREE.Mesh[] = [];
+
+for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {
+  const mesh = new THREE.Mesh(beatGeometry, beatMeshMaterial);
+  mesh.visible = false;
+
+  availableMeshesRing.push(mesh);
+}
+
 function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
   let lastHapticAudioTime = 0;
   let nextAvailableMeshIndex = 0;
-  const availableMeshesRing = useRef<THREE.Mesh[]>([]);
-  const SIDES = 6;
-
   const hapticManager = useStore().hapticManager;
   const trackAnalysis = useStore(state => state.analysis);
 
-  // Because the beat material is cached across multiple renders, just ensure the color reflects the state.
-  beatMeshMaterial.color = useStore().theme.beat.color;
+  // Because the beat items are cached across multiple renders, start by ensuring that the color and position match the state
+  const beatTheme = useStore().theme.beat;
+
+  beatMeshMaterial.color = beatTheme.color;
+  for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {
+    const meshPosition = getBasePosition(meshIdx, beatTheme);
+
+    availableMeshesRing[meshIdx].position.setX(meshPosition.x);
+    availableMeshesRing[meshIdx].position.setY(meshPosition.y);
+  }
+
 
   useEffect(() => useStore.subscribe(
-    state => state.theme.beat.color,
-    (newBeatColor) => {
-      beatMeshMaterial.color = newBeatColor;
+    state => state.theme.beat,
+    (newBeatTheme) => {
+      // Ensure that the beat material reflects the new state
+      beatMeshMaterial.color = newBeatTheme.color;
+
+      // Ensure the x/y positions around the center reflect the new state
+      for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {
+        const meshPosition = getBasePosition(meshIdx, beatTheme);
+    
+        availableMeshesRing[meshIdx].position.setX(meshPosition.x);
+        availableMeshesRing[meshIdx].position.setY(meshPosition.y);
+      }
     }),
     []);
-
-  // Generate available meshes for use in a ring buffer
-  const availableMeshElements = 
-    generateNumericArray(SIDES * 6).map((sideNumber) => {
-      return <mesh
-        key={sideNumber}
-        ref={(mesh: THREE.Mesh) => availableMeshesRing.current[sideNumber] = mesh}
-        visible={false}
-        position={getBasePosition(sideNumber, SIDES, DISTRIBUTION_RADIUS)}
-        geometry={beatGeometry}
-        material={beatMeshMaterial}
-      />
-    });
 
   // Ensure we reset the peak indices when analysis changes (or we seeked).
   // We're okay with just blowing away these values and letting useFrame re-calculate when it needs to
@@ -120,18 +155,18 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       }
 
       // Now we have a new peak to render. Assign it to the next available mesh
-      const meshForPeak = availableMeshesRing.current[nextAvailableMeshIndex];
+      const meshForPeak = availableMeshesRing[nextAvailableMeshIndex];
       meshForPeak.userData['peak'] = curPeak;
       
       // Switch around to the next mesh in the ring buffer
-      nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableMeshesRing.current.length;
+      nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableMeshesRing.length;
 
       // Ensure we're rendering the next peak
       nextUnrenderedPeakIndex++;
     }
 
     // Now update the items in the ring buffer
-    for (let meshForPeak of availableMeshesRing.current) {
+    for (let meshForPeak of availableMeshesRing) {
       const peakData = meshForPeak.userData['peak'] as Peak;
 
       if (peakData === null || peakData === undefined) {
@@ -171,7 +206,12 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
 
   return (
     <group>
-      {availableMeshElements}
+      {availableMeshesRing.map((mesh, index) => {
+        return <primitive
+          key={index}
+          object={mesh}
+        />
+      })}
     </group>
   );
 }

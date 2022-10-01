@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { ALL_THEMES, getContrast } from '../store/themes';
 import './ThemeReviewer.css';
 
+const RAD2DEG = 180 / Math.PI;
+
 function getColorCell(color: THREE.Color, label: string | null = null, groupEnd: boolean = false): JSX.Element {
   return <td
     style={{
@@ -21,6 +23,12 @@ function ThemeReviewer(): JSX.Element {
   const [reviewerVisible, setReviewerVisible] = useState(false);
 
   const themeRows: JSX.Element[] = ALL_THEMES.map((theme) => {
+    const beatPositionAngles = theme.beat.radiansOffset.map((offsetRad) => {
+      return (offsetRad * RAD2DEG).toFixed(0) + '°';
+    }).join(', ');
+
+    const beatPositions = `${theme.beat.sides} [${beatPositionAngles}]`;
+
     return <tr
       key={theme.name}
     >
@@ -31,7 +39,12 @@ function ThemeReviewer(): JSX.Element {
       >
         {theme.name}
       </th>
-      {getColorCell(theme.beat.color, 'base', true)}
+      {getColorCell(theme.beat.color, 'base', false)}
+      <td
+        className="group-end"
+        style={{'background': theme.background.fillColor.getStyle()}}>
+        {beatPositions}
+      </td>
 
       {getColorCell(theme.frequencyGrid.lineColor, 'secondary', true)}
 
@@ -73,7 +86,7 @@ function ThemeReviewer(): JSX.Element {
               </th>
               <th
                 scope="colgroup"
-                colSpan={1}
+                colSpan={2}
               >
                 Beat
               </th>
@@ -112,9 +125,14 @@ function ThemeReviewer(): JSX.Element {
               {/* Beat */}
               <th
                 scope="col"
-                className="group-end"
               >
                 Beat
+              </th>
+              <th
+                scope="col"
+                className="group-end"
+              >
+                Positioning
               </th>
               {/* Frequency */}
               <th
