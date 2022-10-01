@@ -1,4 +1,9 @@
 import { useEffect, useState } from 'react';
+
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBell, faBellSlash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+
 import { useStore } from '../store/visualizerStore';
 import { HapticManager } from '../store/HapticManager';
 
@@ -33,15 +38,45 @@ function HapticFeedbackButton(): JSX.Element {
     }
   };
 
+  // Determine icon type, text, and title based on the status
+  let buttonSubIcon: IconProp;
+  let buttonTitle: string;
+  let buttonText: string;
+
+  if (isEnabled) {
+    if (hasControllers) {
+      buttonSubIcon = faBell;
+      buttonText = "Vibration on";
+      buttonTitle = "Vibration is currently enabled. Click to disable vibration.";
+    }
+    else {
+      buttonSubIcon = faTriangleExclamation;
+      buttonText = "No controllers";
+      buttonTitle = "No controllers detected. Please ensure that your controller is plugged in and press a button for it to be detected.";
+    }
+  }
+  else {
+    buttonSubIcon = faBellSlash;
+    buttonText = "Vibration off";
+    buttonTitle = "Vibration is currently disabled. Click to enable vibration.";
+  }
+
   return (
     <button
       type="button"
       className="btn"
+      title={buttonTitle}
       onClick={toggleHapticFeedback}
     >
-      {hasControllers && isEnabled && <span>Vibration enabled</span>}
-      {!hasControllers && isEnabled && <span>No controllers</span>}
-      {!isEnabled && <span>Vibration not enabled</span>}
+      <span
+        className="fa-layers fa-fw"
+      >
+        <FontAwesomeIcon icon="gamepad" transform="left-10" />
+        <FontAwesomeIcon icon={buttonSubIcon} transform="right-8" />
+      </span>
+      <span className="text-label">
+        {buttonText}
+      </span>
     </button>
   )
 

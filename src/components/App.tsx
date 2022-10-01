@@ -11,6 +11,7 @@ import Visualizer from './Visualizer';
 import HapticFeedbackButton from './HapticFeedbackButton';
 import ThemeCyclerButton from './ThemeCyclerButton';
 import ThemeReviewer from './ThemeReviewer';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 function isSafari(): boolean {
   return navigator.userAgent.indexOf('AppleWebKit') > -1 && navigator.userAgent.indexOf('Chrome') === -1;
@@ -41,6 +42,7 @@ function App(): JSX.Element {
   const introElement = useRef<HTMLDivElement>(null!);
   const sourceFileElement = useRef<HTMLInputElement>(null!);
   const dummyFileButtonElement = useRef<HTMLButtonElement>(null!);
+  const dummyFileButtonText = useRef<HTMLSpanElement>(null!);
   const [fileError, setFileError] = useState('');
 
   // These are indirect refs set up via audio player callback
@@ -99,7 +101,7 @@ function App(): JSX.Element {
     if (sourceFileElement.current?.files?.length === 1) {
       // Disable the file picker while we analyze the track
       dummyFileButtonElement.current.disabled = true;
-      dummyFileButtonElement.current.innerText = "Analyzing...";
+      dummyFileButtonText.current.innerText = "Analyzing...";
       sourceFileElement.current.disabled = true;
       sourceFileElement.current.readOnly = true;
 
@@ -183,7 +185,7 @@ function App(): JSX.Element {
 
           if (dummyFileButtonElement.current) {
             dummyFileButtonElement.current.disabled = false;
-            dummyFileButtonElement.current.innerText = "Choose a track";
+            dummyFileButtonText.current.innerText = "Choose a track";
           }
 
           if (audioPlayerElement.current && audioPlayerElement.current.src) {
@@ -249,7 +251,13 @@ function App(): JSX.Element {
           className="btn"
           onClick={dummyFilePickerClicked}
         >
-          Choose a track
+          <FontAwesomeIcon icon="file-audio" />
+          <span
+            ref={dummyFileButtonText}
+            className="text-label"
+          >
+            Choose a track
+          </span>  
         </button>
         <input
           type="file"

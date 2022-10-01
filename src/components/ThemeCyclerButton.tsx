@@ -1,3 +1,5 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+
 import { useStore } from '../store/visualizerStore';
 import { getNextTheme } from '../store/themes';
 
@@ -18,9 +20,15 @@ function ThemeCyclerButton(): JSX.Element {
     <button
       type="button"
       className="btn"
+      title="Switch theme"
       onClick={cycleTheme}
     >
-      Switch theme
+      <FontAwesomeIcon
+        icon="palette"
+      />
+      <span className="text-label">
+        Switch theme
+      </span>
     </button>
   )
 

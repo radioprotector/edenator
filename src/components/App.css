@@ -17,78 +17,7 @@ html {
   background-color: black;
 }
 
-#filePicker {
-  position: fixed;
-  z-index: 10;
-  top: 5vh;
-  left: 5vw;
-}
-
-#interfaceButtonRow {
-  position: fixed;
-  z-index: 10;
-  top: 5vh;
-  right: 5vw;
-  max-width: 45vw;
-  display: flex;
-  flex-direction: row-reverse;
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 0.5em;
-}
-
-button.btn {
-  display: inline-block;
-  padding: 1vh 1vw;
-  color: var(--ui-color-text);
-  background-color: var(--ui-color-contrast);
-  border: 1px solid var(--ui-color-border);
-  border-radius: 1vh;
-  font-weight: bold;
-}
-
-button.btn:disabled {
-  background-color: var(--ui-color-contrast-disabled);
-}
-
-button.btn:hover {
-  box-shadow: 0 0 3px 2px var(--ui-color-border);
-}
-
-button.btn:focus {
-  outline: 1px dotted var(--ui-color-border);
-  text-decoration: underline;
-  background-color: var(--ui-color-contrast-focus);
-}
-
-/* Collapse text labels of buttons on smaller widths */
-@media (max-width: 576px) {
-  button.btn .text-label {
-    display: none;
-  }
-}
-
-#sourceFile {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0,0,0,0);
-  border: 0;
-}
-
-#audioPlayer {
-  position: fixed;
-  z-index: 10;
-  bottom: 0;
-  left: 25vw;
-  margin: 0 auto;
-  width: 50vw;
-}
-
+/* Style intro text */
 .app-title {
   position: fixed;
   z-index: 20;
@@ -98,6 +27,7 @@ button.btn:focus {
   color: var(--ui-color-contrast);
 }
 
+/* Style file picker error text */
 .app-error {
   position: fixed;
   z-index: 20;
@@ -124,3 +54,104 @@ button.btn:focus {
   font-size: inherit;
   text-decoration: underline;
 }
+
+/* Style the dummy file picker */
+#filePicker {
+  position: fixed;
+  z-index: 10;
+  top: 5vh;
+  left: 5vw;
+
+}
+
+/* Hide the actual file picker from display */
+#sourceFile {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+#interfaceButtonRow {
+  position: fixed;
+  z-index: 10;
+  top: 5vh;
+  right: 5vw;
+  max-width: 45vw;
+  display: flex;
+  flex-direction: row-reverse;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5em;
+}
+
+button.btn {
+  display: inline-block;
+  padding: 1vh 1vw;
+  color: var(--ui-color-text);
+  background-color: var(--ui-color-contrast);
+  border: 1px solid var(--ui-color-border);
+  border-radius: 1vh;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+button.btn:disabled {
+  background-color: var(--ui-color-contrast-disabled);
+}
+
+button.btn:hover {
+  box-shadow: 0 0 3px 2px var(--ui-color-border);
+}
+
+button.btn:focus {
+  outline: 1px dotted var(--ui-color-border);
+  text-decoration: underline;
+  background-color: var(--ui-color-contrast-focus);
+}
+
+/* Ensure that text labels next to icons get spaced */
+button.btn svg + .text-label {
+  padding-left: 0.25vw;
+}
+
+button.btn .fa-layers + .text-label {
+  padding-left: 0.5vw;
+}
+
+/* Collapse text labels of buttons on smaller widths */
+@media (max-width: 576px) {
+  button.btn .text-label {
+    display: none;
+  }
+}
+
+
+#audioPlayer {
+  position: fixed;
+  z-index: 10;
+  bottom: 0;
+  left: 25vw;
+  margin: 0 auto;
+  width: 50vw;
+}
+
+#audioPlayer::-webkit-media-controls-panel {
+  background-color: var(--ui-color-contrast);
+}
+
+/* #audioPlayer::-webkit-media-controls-mute-button,
+#audioPlayer::-webkit-media-controls-play-button,
+#audioPlayer::-webkit-media-controls-current-time-display,
+#audioPlayer::-webkit-media-controls-time-remaining-display,
+#audioPlayer::-webkit-media-controls-seek-back-button,
+#audioPlayer::-webkit-media-controls-seek-forward-button,
+#audioPlayer::-webkit-media-controls-timeline,
+#audioPlayer::-webkit-media-controls-volume-slider {
+  color: var(--ui-color-text);
+} */

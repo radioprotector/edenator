@@ -1,9 +1,14 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { faGamepad, faBell, faBellSlash, faTriangleExclamation, faPalette, faFileAudio } from '@fortawesome/free-solid-svg-icons';
+
 import './index.css';
 import App from './components/App';
 import reportWebVitals from './reportWebVitals';
+
+library.add(faGamepad, faBell, faBellSlash, faTriangleExclamation, faPalette, faFileAudio);
 
 const container = document.getElementById('root');
 const root = createRoot(container!);
