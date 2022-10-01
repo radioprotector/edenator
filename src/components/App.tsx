@@ -1,13 +1,14 @@
-import React, { useRef, useCallback, useEffect, Suspense, useState } from 'react';
+import { useRef, useCallback, useEffect, Suspense, useState } from 'react';
 import { Stats } from '@react-three/drei';
 
 import { analyzeTrack } from '../store/analyzer';
 import { useStore } from '../store/visualizerStore';
-import { getNextTheme, getThemeForTrack } from '../store/themes';
+import { getThemeForTrack } from '../store/themes';
 
 import './App.css';
 import AppStyles from './AppStyles';
 import Visualizer from './Visualizer';
+import ThemeCyclerButton from './ThemeCyclerButton';
 import ThemeReviewer from './ThemeReviewer';
 
 function isSafari(): boolean {
@@ -94,8 +95,7 @@ function App(): JSX.Element {
   };
 
   const selectedFileChange = () => {
-    if (sourceFileElement.current?.files?.length === 1)
-    {
+    if (sourceFileElement.current?.files?.length === 1) {
       // Disable the file picker while we analyze the track
       dummyFileButtonElement.current.disabled = true;
       dummyFileButtonElement.current.innerText = "Analyzing...";
@@ -192,16 +192,6 @@ function App(): JSX.Element {
     }
   };
 
-  const cycleTheme = () => {
-    const nextTheme = getNextTheme(useStore.getState().theme);
-    
-    if (process.env.NODE_ENV !== 'production') {
-      console.debug(`switching to ${nextTheme.name} theme`);
-    }
-
-    setStoreTheme(nextTheme);
-  };
-
   // Update the page title based on the currently playing song
   useEffect(() => useStore.subscribe(
     (state) => state.analysis, 
@@ -269,14 +259,13 @@ function App(): JSX.Element {
           onChange={selectedFileChange}
         />
       </div>
-      <button
-        type="button"
-        id="themeCycler"
-        className="btn"
-        onClick={cycleTheme}
+
+      <div
+        id="interfaceButtonRow"
       >
-        Switch theme
-      </button>
+        <ThemeCyclerButton />
+      </div>
+
       <audio
         ref={audioPlayerRef}
         id="audioPlayer"

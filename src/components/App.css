@@ -24,11 +24,18 @@ html {
   left: 5vw;
 }
 
-#themeCycler {
+#interfaceButtonRow {
   position: fixed;
   z-index: 10;
   top: 5vh;
   right: 5vw;
+  max-width: 45vw;
+  display: flex;
+  flex-direction: row-reverse;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5em;
 }
 
 button.btn {
@@ -53,6 +60,13 @@ button.btn:focus {
   outline: 1px dotted var(--ui-color-border);
   text-decoration: underline;
   background-color: var(--ui-color-contrast-focus);
+}
+
+/* Collapse text labels of buttons on smaller widths */
+@media (max-width: 576px) {
+  button.btn .text-label {
+    display: none;
+  }
 }
 
 #sourceFile {
