@@ -170,10 +170,11 @@ export class HapticManager {
    */
   private playFeedbackForActuator(hapticActuator: GamepadHapticActuator, durationMs: number, strongMagnitude: number, weakMagnitude: number): void {
     try {
-      // HACK: pulse and playEffect are not defined in GamepadHapticActuator typings
+      // HACK: pulse and playEffect are not defined in GamepadHapticActuator typings.
+      // Catch the promises they return if they fail.
       if ((hapticActuator as any).pulse) {
         // https://developer.mozilla.org/en-US/docs/Web/API/GamepadHapticActuator/pulse
-        (hapticActuator as any).pulse(strongMagnitude, durationMs);
+        (hapticActuator as any).pulse(strongMagnitude, durationMs).catch(() => {});
       }
       else if ((hapticActuator as any).playEffect)
         // https://developer.mozilla.org/en-US/docs/Web/API/GamepadHapticActuator/playEffect
@@ -182,7 +183,7 @@ export class HapticManager {
           startDelay: 0,
           strongMagnitude: strongMagnitude,
           weakMagnitude: weakMagnitude
-        });
+        }).catch(() => {});
       }
     catch {}
   } 
