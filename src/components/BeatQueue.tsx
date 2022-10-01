@@ -46,10 +46,12 @@ const beatMeshMaterial = new THREE.MeshPhongMaterial({ shininess: 0.5 });
 
 function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
+  let lastHapticAudioTime = 0;
   let nextAvailableMeshIndex = 0;
   const availableMeshesRing = useRef<THREE.Mesh[]>([]);
   const SIDES = 6;
 
+  const hapticManager = useStore().hapticManager;
   const trackAnalysis = useStore(state => state.analysis);
 
   // Because the beat material is cached across multiple renders, just ensure the color reflects the state.
@@ -75,13 +77,16 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       />
     });
 
-  // Ensure we reset the next peak index when analysis changes (or we seeked).
+  // Ensure we reset the peak indices when analysis changes (or we seeked).
   // We're okay with just blowing away these values and letting useFrame re-calculate when it needs to
   useEffect(() => useStore.subscribe(
     state => [state.analysis, state.audioLastSeeked],
     () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextUnrenderedPeakIndex = 0;
+
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      lastHapticAudioTime = 0;
       
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextAvailableMeshIndex = 0;
@@ -149,6 +154,12 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
 
       // Tweak scaling if we're during the actual beat
       if (audioTime >= peakData.time && audioTime < peakDisplayEnd) {
+        // If we can issue haptic feedback for the peak, do so now
+        if (hapticManager !== null && lastHapticAudioTime < peakData.time) {
+          hapticManager.playFeedback(peakData);
+          lastHapticAudioTime = peakData.end;
+        }
+
         meshForPeak.scale.setScalar(THREE.MathUtils.mapLinear(audioTime, peakData.time, peakDisplayEnd, 1.0, 2.0));
       }
       else {

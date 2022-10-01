@@ -8,6 +8,7 @@ import { getThemeForTrack } from '../store/themes';
 import './App.css';
 import AppStyles from './AppStyles';
 import Visualizer from './Visualizer';
+import HapticFeedbackButton from './HapticFeedbackButton';
 import ThemeCyclerButton from './ThemeCyclerButton';
 import ThemeReviewer from './ThemeReviewer';
 
@@ -264,6 +265,7 @@ function App(): JSX.Element {
         id="interfaceButtonRow"
       >
         <ThemeCyclerButton />
+        <HapticFeedbackButton />
       </div>
 
       <audio

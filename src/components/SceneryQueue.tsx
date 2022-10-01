@@ -117,9 +117,12 @@ function assignMaterialsToMesh(mesh: THREE.Mesh, forLull: Lull, trackAnalysis: T
 
 function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   let nextUnrenderedLullIndex = 0;
+  let lastHapticAudioTime = 0;
   let nextAvailableMeshIndex = 0;
   const availableSceneryMeshesRing = useRef<THREE.Mesh[]>([]);
   const trackAnalysis = useStore(state => state.analysis);
+
+  const hapticManager = useStore().hapticManager;
 
   // Make the lookahead period variable based on measure lengths
   const lookaheadPeriod = useMemo(() => {
@@ -177,6 +180,8 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
     () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextUnrenderedLullIndex = 0;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      lastHapticAudioTime = 0;
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextAvailableMeshIndex = 0;
     }),
@@ -291,6 +296,13 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         meshForLull.scale.set(1, fadeInScale, 1);
       }
       else {
+        // We are in the period where the lull has officially started.
+        // If we can issue haptic feedback for the lull, do so now.
+        if (hapticManager !== null && lastHapticAudioTime < lullData.time) {
+          hapticManager.playLullFeedback(lullData);
+          lastHapticAudioTime = lullData.end;
+        }
+
         // When scaling based on audio values, apply easing factors in either direction to minimize suddenness
         const easedDownXScale = meshForLull.scale.x * 0.995;
         const easedDownYScale = meshForLull.scale.y * 0.995;
