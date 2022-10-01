@@ -23,10 +23,10 @@ const LOOKAHEAD_PERIOD = 0.1;
  */
 const DECAY_PERIOD = 0.5;
 
-/**
- * The intensity of each light.
- */
-const BASE_LIGHT_INTENSITY = 20;
+// /**
+//  * The intensity of each light.
+//  */
+// const BASE_LIGHT_INTENSITY = 20;
 
 /**
  * The distance over which each light attenuates.
