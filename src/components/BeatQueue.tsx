@@ -98,6 +98,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       return;
     }
 
+    const canSendHapticEvents = !props.audio.current.ended && !props.audio.current.paused;
     const audioTime = props.audio.current.currentTime;
     const lastRenderTime = Math.max(audioTime - delta, 0);
 
@@ -155,7 +156,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       // Tweak scaling if we're during the actual beat
       if (audioTime >= peakData.time && audioTime < peakDisplayEnd) {
         // If we can issue haptic feedback for the peak, do so now
-        if (hapticManager !== null && lastHapticAudioTime < peakData.time) {
+        if (hapticManager !== null && canSendHapticEvents && lastHapticAudioTime < peakData.time) {
           hapticManager.playFeedback(peakData);
           lastHapticAudioTime = peakData.end;
         }

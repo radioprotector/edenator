@@ -192,6 +192,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       return;
     }
 
+    const canSendHapticEvents = !props.audio.current.ended && !props.audio.current.paused;
     const audioTime = props.audio.current.currentTime;
     const lastRenderTime = Math.max(audioTime - delta, 0);
 
@@ -298,7 +299,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       else {
         // We are in the period where the lull has officially started.
         // If we can issue haptic feedback for the lull, do so now.
-        if (hapticManager !== null && lastHapticAudioTime < lullData.time) {
+        if (hapticManager !== null && canSendHapticEvents && lastHapticAudioTime < lullData.time) {
           hapticManager.playLullFeedback(lullData);
           lastHapticAudioTime = lullData.end;
         }
