@@ -4,6 +4,7 @@ html {
   --ui-color-contrast-disabled: #bfbfbf;
   --ui-color-contrast-focus: #d9d9d9;
   --ui-color-border: black;
+  background-color: black;
 }
 
 #canvas-container {
@@ -81,7 +82,7 @@ html {
   z-index: 10;
   top: 5vh;
   right: 5vw;
-  max-width: 45vw;
+  max-width: 50vw;
   display: flex;
   flex-direction: row-reverse;
   flex-wrap: nowrap;
@@ -99,6 +100,7 @@ button.btn {
   border-radius: 1vh;
   font-weight: bold;
   font-size: 0.9em;
+  min-width: 4em;
 }
 
 button.btn:disabled {
@@ -122,6 +124,13 @@ button.btn svg + .text-label {
 
 button.btn .fa-layers + .text-label {
   padding-left: 0.5vw;
+}
+
+/* Make button text less bold on smaller widths */
+@media (max-width: 900px) {
+  button.btn {
+    font-weight: normal;
+  }
 }
 
 /* Collapse text labels of buttons on smaller widths */
