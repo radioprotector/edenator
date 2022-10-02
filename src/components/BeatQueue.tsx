@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef } from 'react';
+import { RefObject, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
@@ -95,7 +95,6 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
     availableMeshesRing[meshIdx].position.setY(meshPosition.y);
   }
 
-
   useEffect(() => useStore.subscribe(
     state => state.theme.beat,
     (newBeatTheme) => {
@@ -104,7 +103,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
 
       // Ensure the x/y positions around the center reflect the new state
       for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {
-        const meshPosition = getBasePosition(meshIdx, beatTheme);
+        const meshPosition = getBasePosition(meshIdx, newBeatTheme);
     
         availableMeshesRing[meshIdx].position.setX(meshPosition.x);
         availableMeshesRing[meshIdx].position.setY(meshPosition.y);
