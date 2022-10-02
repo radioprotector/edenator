@@ -195,9 +195,8 @@ function getDepthForSegment(segmentIndex: number): number {
 }
 
 function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
-  let nextBassIndex = 0;
-  let nextSubBassIndex = 0;
-  
+  const nextBassIndex = useRef<number>(0);
+  const nextSubBassIndex = useRef<number>(0);
   const trackAnalysis = useStore(state => state.analysis);
 
   // Because the wireframe/filler materials are cached across multiple renders, just ensure the colors reflects the state.
@@ -279,11 +278,12 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
   useEffect(() => useStore.subscribe(
     state => [state.analysis, state.audioLastSeeked],
     () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      nextBassIndex = 0;
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`BassTunnel indices reset`);
+      }
 
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      nextSubBassIndex = 0;
+      nextBassIndex.current = 0;
+      nextSubBassIndex.current = 0;
     }),
     []);
 
@@ -302,7 +302,7 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
     }
 
     // See if we're currently during a bass period
-    for(let bassIndex = nextBassIndex; bassIndex < trackAnalysis.bass.length; bassIndex++) {
+    for(let bassIndex = nextBassIndex.current; bassIndex < trackAnalysis.bass.length; bassIndex++) {
       const curBass = trackAnalysis.bass[bassIndex];
       // Ease in and out of the bass peak
       const startTime = curBass.time - 0.25;
@@ -316,7 +316,7 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
 
       // If we've already passed this bass peak, make sure we'll skip over it in subsequent frames
       if (endTime < currentTrackTime) {
-        nextBassIndex++;
+        nextBassIndex.current += 1;
         continue;
       }
 
@@ -334,7 +334,7 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
     }
 
     // See if we're currently during a bass period
-    for(let subBassIndex = nextSubBassIndex; subBassIndex < trackAnalysis.subBass.length; subBassIndex++) {
+    for(let subBassIndex = nextSubBassIndex.current; subBassIndex < trackAnalysis.subBass.length; subBassIndex++) {
       const curSubBass = trackAnalysis.subBass[subBassIndex];
       // Ease in and out of the sub-bass peak
       const startTime = curSubBass.time - 0.5;
@@ -348,7 +348,7 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
 
       // If we've already passed this peak, make sure we'll skip over it in subsequent frames
       if (endTime < currentTrackTime) {
-        nextSubBassIndex++;
+        nextSubBassIndex.current += 1;
         continue;
       }
 

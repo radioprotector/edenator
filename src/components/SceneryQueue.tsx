@@ -1,4 +1,4 @@
-import { RefObject, Suspense, useEffect, useMemo } from 'react';
+import { RefObject, Suspense, useEffect, useMemo, useRef } from 'react';
 import { MathUtils, Object3D, Mesh, Group, Scene, Material, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { useFrame, useLoader } from '@react-three/fiber';
@@ -119,6 +119,7 @@ function initializeSceneryObjectLull(ringIdx: number, lullIdx: number, lull: Lul
 
   // Associate the lull and clear any children it may currently have.
   ringObj.userData['lull'] = lull;
+  ringObj.userData['lullIdx'] = lullIdx;
   ringObj.clear();
 
   // Use different seeds for the scenery/position so that all types of scenery can end up either on the left or right
@@ -239,9 +240,9 @@ function initializeSceneryObjectLull(ringIdx: number, lullIdx: number, lull: Lul
 }
 
 function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
-  let nextUnrenderedLullIndex = 0;
-  let lastHapticAudioTime = 0;
-  let nextAvailableMeshIndex = 0;
+  const nextUnrenderedLullIndex = useRef<number>(0);
+  const lastHapticAudioTime = useRef<number>(0);
+  const nextAvailableMeshIndex = useRef<number>(0);
 
   const trackAnalysis = useStore(state => state.analysis);
   const hapticManager = useStore.getState().hapticManager;
@@ -314,23 +315,15 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
   useEffect(() => useStore.subscribe(
     state => [state.analysis, state.audioLastSeeked],
     () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      nextUnrenderedLullIndex = 0;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      lastHapticAudioTime = 0;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      nextAvailableMeshIndex = 0;
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`SceneryQueue indices reset`);
+      }
+
+      nextUnrenderedLullIndex.current = 0;
+      lastHapticAudioTime.current = 0;
+      nextAvailableMeshIndex.current = 0;
     }),
     []);
-
-  // Initially hide all items in the ring buffer - necessary items will be displayed in the next render loop
-  for(const ringObj of availableSceneryObjectsRing) {
-    ringObj.visible = false;
-
-    if ('lull' in ringObj.userData) {
-      delete ringObj.userData['lull'];
-    }
-  }
 
   useFrame((_state, delta) => {
     if (props.audio.current === null) {
@@ -342,14 +335,14 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
     const lastRenderTime = Math.max(audioTime - delta, 0);
 
     // Determine if we need to fill the ring buffer with any new meshes
-    for (let lullIdx = nextUnrenderedLullIndex; lullIdx < trackAnalysis.lulls.length; lullIdx++) {
+    for (let lullIdx = nextUnrenderedLullIndex.current; lullIdx < trackAnalysis.lulls.length; lullIdx++) {
       const curLull = trackAnalysis.lulls[lullIdx];
       const lullDisplayStart = curLull.time - lookaheadPeriod;
       const lullDisplayEnd = curLull.time + curLull.duration;
 
       // See if we're already too late for this lull - if so, skip ahead
       if (lastRenderTime > lullDisplayEnd) {
-        nextUnrenderedLullIndex++;
+        nextUnrenderedLullIndex.current += 1;
         continue;
       }
 
@@ -359,13 +352,13 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       }
 
       // Now we have a new lull to render. Initialize the scenery object
-      initializeSceneryObjectLull(nextAvailableMeshIndex, lullIdx, curLull, trackAnalysis, eligibleSceneryItems, sceneryMeshMap);
+      initializeSceneryObjectLull(nextAvailableMeshIndex.current, lullIdx, curLull, trackAnalysis, eligibleSceneryItems, sceneryMeshMap);
       
       // Switch around to the next item in the ring buffer
-      nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableSceneryObjectsRing.length;
+      nextAvailableMeshIndex.current = (nextAvailableMeshIndex.current + 1) % availableSceneryObjectsRing.length;
 
       // Ensure we're rendering the next lull
-      nextUnrenderedLullIndex++;
+      nextUnrenderedLullIndex.current += 1;
     }
 
     // Calculate audio-based scaling factors
@@ -385,15 +378,28 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       }
     }
 
-    // Now update the items in the ring buffer
+    // Now update the items in the ring buffer - track which lulls have been rendered
+    const renderedLullIndices = new Set<number>();
+
     for (let itemIdx = 0; itemIdx < availableSceneryObjectsRing.length; itemIdx++) {
       const objForLull = availableSceneryObjectsRing[itemIdx];
       const lullData = objForLull.userData['lull'] as Lull;
+      const lullIdx = objForLull.userData['lullIdx'] as number;
 
       if (lullData === null || lullData === undefined) {
         objForLull.visible = false;
         continue;
       }
+
+      // Ensure we haven't already rendered this lull in the animation pass
+      if (renderedLullIndices.has(lullIdx)) {
+        objForLull.visible = false;
+        delete objForLull.userData['lull'];
+        delete objForLull.userData['lullIdx'];
+        continue;
+      }
+
+      renderedLullIndices.add(lullIdx);
 
       const lullDisplayStart = lullData.time - lookaheadPeriod;
       const lullDisplayEnd = lullData.time + lullData.duration;
@@ -402,6 +408,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       if (lullDisplayStart > audioTime || lullDisplayEnd < lastRenderTime) {
         objForLull.visible = false;
         delete objForLull.userData['lull'];
+        delete objForLull.userData['lullIdx'];
         continue;
       }
 
@@ -418,9 +425,9 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       else {
         // We are in the period where the lull has officially started.
         // If we can issue haptic feedback for the lull, do so now.
-        if (hapticManager !== null && canSendHapticEvents && lastHapticAudioTime < lullData.time) {
+        if (hapticManager !== null && canSendHapticEvents && lastHapticAudioTime.current < lullData.time) {
           hapticManager.playLullFeedback(lullData);
-          lastHapticAudioTime = lullData.end;
+          lastHapticAudioTime.current = lullData.end;
         }
 
         // When scaling based on audio values, apply easing factors in either direction to minimize suddenness

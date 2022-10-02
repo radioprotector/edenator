@@ -1,4 +1,4 @@
-import { RefObject, useEffect } from 'react';
+import { RefObject, useEffect, useRef } from 'react';
 import { Vector3, MathUtils, Mesh, SphereGeometry, MeshPhongMaterial } from 'three';
 import { useFrame } from '@react-three/fiber';
 
@@ -78,9 +78,9 @@ for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {
 }
 
 function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
-  let nextUnrenderedPeakIndex = 0;
-  let lastHapticAudioTime = 0;
-  let nextAvailableMeshIndex = 0;
+  const nextUnrenderedPeakIndex = useRef<number>(0);
+  const lastHapticAudioTime = useRef<number>(0);
+  const nextAvailableMeshIndex = useRef<number>(0);
   const hapticManager = useStore.getState().hapticManager;
   const trackAnalysis = useStore(state => state.analysis);
 
@@ -116,25 +116,15 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   useEffect(() => useStore.subscribe(
     state => [state.analysis, state.audioLastSeeked],
     () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      nextUnrenderedPeakIndex = 0;
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`BeatQueue indices reset`);
+      }
 
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      lastHapticAudioTime = 0;
-      
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      nextAvailableMeshIndex = 0;
+      nextUnrenderedPeakIndex.current = 0;
+      lastHapticAudioTime.current = 0;
+      nextAvailableMeshIndex.current = 0;
     }),
     []);
-
-  // Initially hide all items in the ring buffer - necessary items will be displayed in the next render loop
-  for(const ringObj of availableMeshesRing) {
-    ringObj.visible = false;
-
-    if ('peak' in ringObj.userData) {
-      delete ringObj.userData['peak'];
-    }
-  }
 
   useFrame((_state, delta) => {
     if (props.audio.current === null) {
@@ -146,14 +136,14 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
     const lastRenderTime = Math.max(audioTime - delta, 0);
 
     // Determine if we need to fill the ring buffer with any new meshes
-    for (let peakIdx = nextUnrenderedPeakIndex; peakIdx < trackAnalysis.beat.length; peakIdx++) {
+    for (let peakIdx = nextUnrenderedPeakIndex.current; peakIdx < trackAnalysis.beat.length; peakIdx++) {
       const curPeak = trackAnalysis.beat[peakIdx];
       const peakDisplayStart = curPeak.time - LOOKAHEAD_PERIOD;
       const peakDisplayEnd = curPeak.end + DECAY_PERIOD;
 
       // See if we're already too late for this peak - if so, skip ahead
       if (lastRenderTime > peakDisplayEnd) {
-        nextUnrenderedPeakIndex++;
+        nextUnrenderedPeakIndex.current += 1;
         continue;
       }
 
@@ -163,32 +153,47 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       }
 
       // Now we have a new peak to render. Assign it to the next available mesh
-      const meshForPeak = availableMeshesRing[nextAvailableMeshIndex];
+      const meshForPeak = availableMeshesRing[nextAvailableMeshIndex.current];
       meshForPeak.userData['peak'] = curPeak;
+      meshForPeak.userData['peakIdx'] = peakIdx;
       
       // Switch around to the next mesh in the ring buffer
-      nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableMeshesRing.length;
+      nextAvailableMeshIndex.current = (nextAvailableMeshIndex.current + 1) % availableMeshesRing.length;
 
       // Ensure we're rendering the next peak
-      nextUnrenderedPeakIndex++;
+      nextUnrenderedPeakIndex.current += 1;
     }
 
     // Now update the items in the ring buffer
+    const renderedPeakIndices = new Set<number>();
+
     for (let meshForPeak of availableMeshesRing) {
       const peakData = meshForPeak.userData['peak'] as Peak;
+      const peakIdx = meshForPeak.userData['peakIdx'] as number;
 
       if (peakData === null || peakData === undefined) {
         meshForPeak.visible = false;
         continue;
       }
 
+      // Ensure we haven't already rendered this peak in the animation pass
+      if (renderedPeakIndices.has(peakIdx)) {
+        meshForPeak.visible = false;
+        delete meshForPeak.userData['peak'];
+        delete meshForPeak.userData['peakIdx'];
+        continue;
+      }
+
+      renderedPeakIndices.add(peakIdx);
+
       const peakDisplayStart = peakData.time - LOOKAHEAD_PERIOD;
       const peakDisplayEnd = peakData.end + DECAY_PERIOD;
 
-      // See if we've finished peaking, which means we should hide the mesh
+      // See if we've finished peaking, which means we should hide the mesh.
       if (peakDisplayStart > audioTime || peakDisplayEnd < lastRenderTime) {
         meshForPeak.visible = false;
         delete meshForPeak.userData['peak'];
+        delete meshForPeak.userData['peakIdx'];
         continue;
       }
 
@@ -199,9 +204,9 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       // Tweak scaling if we're during the actual beat
       if (audioTime >= peakData.time && audioTime < peakDisplayEnd) {
         // If we can issue haptic feedback for the peak, do so now
-        if (hapticManager !== null && canSendHapticEvents && lastHapticAudioTime < peakData.time) {
+        if (hapticManager !== null && canSendHapticEvents && lastHapticAudioTime.current < peakData.time) {
           hapticManager.playFeedback(peakData);
-          lastHapticAudioTime = peakData.end;
+          lastHapticAudioTime.current = peakData.end;
         }
 
         meshForPeak.scale.setScalar(MathUtils.mapLinear(audioTime, peakData.time, peakDisplayEnd, 1.0, 2.0));
