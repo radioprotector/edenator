@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Color } from 'three';
 import { GeometricScenery, SceneryKey } from './scenery';
 import { OpenKey, TrackAnalysis } from './TrackAnalysis';
 
@@ -7,9 +7,9 @@ import { OpenKey, TrackAnalysis } from './TrackAnalysis';
  */
 const FULL_RADIANS = 2 * Math.PI;
 
-const BLACK_COLOR = new THREE.Color(0x000000);
+const BLACK_COLOR = new Color(0x000000);
 
-const WHITE_COLOR = new THREE.Color(0xFFFFFF);
+const WHITE_COLOR = new Color(0xFFFFFF);
 
 /**
  * The threshold against which the color is considered dark enough to support legible white text.
@@ -24,7 +24,7 @@ export interface BeatTheme {
   /**
    * The color to use for incoming beat peaks.
    */
-  color: THREE.Color;
+  color: Color;
 
   /**
    * The number of sides to use for the beat pattern arrangement.
@@ -50,12 +50,12 @@ export interface Theme {
     /**
      * The color to use for wireframes that form the "tunnel".
      */
-    wireframeColor: THREE.Color;
+    wireframeColor: Color;
 
     /**
      * The color to use for panels that fill different parts of the tunnel.
      */
-    panelColor: THREE.Color;
+    panelColor: Color;
   },
 
   /**
@@ -70,7 +70,7 @@ export interface Theme {
     /**
      * The sprite color to use for incoming treble peaks.
      */
-    spriteColor: THREE.Color;
+    spriteColor: Color;
 
     /**
      * The path to the sprite texture to use for incoming treble peaks.
@@ -80,7 +80,7 @@ export interface Theme {
     /**
      * The light color to use for incoming treble peaks.
      */
-    lightColor: THREE.Color;
+    lightColor: Color;
   },
 
   /**
@@ -90,7 +90,7 @@ export interface Theme {
     /**
      * The color to use for drawing frequency lines.
      */
-    lineColor: THREE.Color;
+    lineColor: Color;
   },
 
   /**
@@ -110,42 +110,42 @@ export interface Theme {
     /**
      * The color to use for filling the background scene.
      */
-    fillColor: THREE.Color;
+    fillColor: Color;
 
     /**
      * The color to use for the sun.
      */
-    sunColor: THREE.Color;
+    sunColor: Color;
 
     /**
      * The color to use for the "burst" lines that rotate around the sun.
      */
-    burstLineColor: THREE.Color;
+    burstLineColor: Color;
 
     /**
      * The standard color to use for stars in the background.
      */
-    starColor: THREE.Color;
+    starColor: Color;
 
     /**
      * The color to use for "flashed" stars in the background.
      */
-    starFlashColor: THREE.Color;
+    starFlashColor: Color;
   },
 
   /**
    * Contains theming information for the overall application UI.
    */
   ui: {
-    textColor: THREE.Color;
+    textColor: Color;
 
-    backgroundColor: THREE.Color;
+    backgroundColor: Color;
 
-    disabledBackgroundColor: THREE.Color;
+    disabledBackgroundColor: Color;
 
-    focusBackgroundColor: THREE.Color;
+    focusBackgroundColor: Color;
 
-    borderColor: THREE.Color;
+    borderColor: Color;
   }
 }
 
@@ -172,7 +172,7 @@ function getLumaComponent(floatColor: number): number {
  * @returns The corresponding luma value.
  * @see {@link https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef}
  */
-function getLuma(color: THREE.Color): number {
+function getLuma(color: Color): number {
   return (0.2126 * getLumaComponent(color.r)) + (0.7152 * getLumaComponent(color.g)) + (0.0722 * getLumaComponent(color.b));
 }
 
@@ -181,7 +181,7 @@ function getLuma(color: THREE.Color): number {
  * @param color The color to check against.
  * @returns The equivalent contrasting color.
  */
-export function getContrast(color: THREE.Color): THREE.Color {
+export function getContrast(color: Color): Color {
   if (getLuma(color) < LIGHT_LUMA_THRESHOLD) {
     return WHITE_COLOR;
   }
@@ -190,85 +190,85 @@ export function getContrast(color: THREE.Color): THREE.Color {
   }
 }
 
-function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryColor: THREE.Color, tertiaryColor: THREE.Color | null = null): Theme {
+function generateThemeForColor(name: string, baseColor: Color, secondaryColor: Color, tertiaryColor: Color | null = null): Theme {
   // Default the tertiary color if not specified
   if (tertiaryColor === null) {
-    tertiaryColor = new THREE.Color(baseColor).lerp(secondaryColor, 0.5);
+    tertiaryColor = new Color(baseColor).lerp(secondaryColor, 0.5);
   }
 
   // Determine the UI text color to use
-  let uiTextColor: THREE.Color;
-  let uiDisabledBgColor: THREE.Color;
-  let uiFocusBgColor: THREE.Color;
+  let uiTextColor: Color;
+  let uiDisabledBgColor: Color;
+  let uiFocusBgColor: Color;
 
   if (getLuma(baseColor) < LIGHT_LUMA_THRESHOLD) {
     uiTextColor = WHITE_COLOR;
-    uiDisabledBgColor = new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.3);
-    uiFocusBgColor = new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.2);
+    uiDisabledBgColor = new Color(baseColor).lerp(BLACK_COLOR, 0.3);
+    uiFocusBgColor = new Color(baseColor).lerp(WHITE_COLOR, 0.2);
   }
   else {
     uiTextColor = BLACK_COLOR;
-    uiDisabledBgColor = new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.3);
-    uiFocusBgColor = new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.2);
+    uiDisabledBgColor = new Color(baseColor).lerp(WHITE_COLOR, 0.3);
+    uiFocusBgColor = new Color(baseColor).lerp(BLACK_COLOR, 0.2);
   }
 
   return {
     name: name,
     bass: {
-      wireframeColor: new THREE.Color(tertiaryColor).lerp(BLACK_COLOR, 0.3),
-      panelColor: new THREE.Color(tertiaryColor)
+      wireframeColor: new Color(tertiaryColor).lerp(BLACK_COLOR, 0.3),
+      panelColor: new Color(tertiaryColor)
     },
     beat: {
-      color: new THREE.Color(baseColor),
+      color: new Color(baseColor),
       sides: 6,
       radiansOffset: [0, FULL_RADIANS / 12] // Alternate between 0 degrees and 30 degrees adjustment
     },
     treble: {
-      spriteColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.65),
+      spriteColor: new Color(baseColor).lerp(WHITE_COLOR, 0.65),
       spriteTexture: process.env.PUBLIC_URL + '/textures/extendring.png',
-      lightColor: new THREE.Color(baseColor).lerp(WHITE_COLOR, 0.75),
+      lightColor: new Color(baseColor).lerp(WHITE_COLOR, 0.75),
     },
     frequencyGrid: {
-      lineColor: new THREE.Color(secondaryColor)
+      lineColor: new Color(secondaryColor)
     },
     scenery: {
       availableItems: GeometricScenery
     },
     background: {
-      fillColor: new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.97),
-      sunColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.5),
-      burstLineColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.25),
-      starColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.1),
-      starFlashColor: new THREE.Color(baseColor).lerp(secondaryColor, 0.75)
+      fillColor: new Color(baseColor).lerp(BLACK_COLOR, 0.97),
+      sunColor: new Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.5),
+      burstLineColor: new Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.25),
+      starColor: new Color(baseColor).lerp(secondaryColor, 0.75).lerp(WHITE_COLOR, 0.1),
+      starFlashColor: new Color(baseColor).lerp(secondaryColor, 0.75)
     },
     ui: {
       textColor: uiTextColor,
-      backgroundColor: new THREE.Color(baseColor),
+      backgroundColor: new Color(baseColor),
       disabledBackgroundColor: uiDisabledBgColor,
       focusBackgroundColor: uiFocusBgColor,
-      borderColor: new THREE.Color(secondaryColor)
+      borderColor: new Color(secondaryColor)
     }
   };
 }
 
-export const defaultTheme = generateThemeForColor('default', new THREE.Color(0xff6600), new THREE.Color(0xff3333), new THREE.Color(0xff9933));
+export const defaultTheme = generateThemeForColor('default', new Color(0xff6600), new Color(0xff3333), new Color(0xff9933));
 
-const magentaTheme = generateThemeForColor('magenta', new THREE.Color(0xff33ff), new THREE.Color(0x993399), new THREE.Color(0x0033ff));
-const indigoTheme = generateThemeForColor('indigo', new THREE.Color(0xcc00ff), new THREE.Color(0x6666ff), new THREE.Color(0x6633ff));
-const darkBlueTheme = generateThemeForColor('deep blue', new THREE.Color(0x0033ff), new THREE.Color(0xcc9900), new THREE.Color(0x00cccc));
-const midBlueTheme = generateThemeForColor('mid blue', new THREE.Color(0x6699ff), new THREE.Color(0x66cc66), new THREE.Color(0x3366ff));
-const lightBlueTheme = generateThemeForColor('light blue', new THREE.Color(0x99ccff), new THREE.Color(0xff66ff), new THREE.Color(0x33ff33));
-const blueGreenTheme = generateThemeForColor('blue-green', new THREE.Color(0x00ffff), new THREE.Color(0xcc6600), new THREE.Color(0x339999));
-const greenTheme = generateThemeForColor('green', new THREE.Color(0x00ff00), new THREE.Color(0xFF0099), new THREE.Color(0x00ff99));
-const yellowGreenTheme = generateThemeForColor('yellow-green', new THREE.Color(0x99ffcc), new THREE.Color(0xffcc33), new THREE.Color(0x33cc00));
-const yellowTheme = generateThemeForColor('yellow', new THREE.Color(0xffcc00), new THREE.Color(0x3333FF), new THREE.Color(0xcccc33));
-const orangeTheme = generateThemeForColor('orange', new THREE.Color(0xff6600), new THREE.Color(0x33FFFF), new THREE.Color(0xff0000));
-const redTheme = generateThemeForColor('red', new THREE.Color(0xff0000), new THREE.Color(0x99FFcc), new THREE.Color(0xff6699));
-const pinkTheme = generateThemeForColor('pink', new THREE.Color(0xff99cc), new THREE.Color(0xff3333), new THREE.Color(0xcc33cc));
+const magentaTheme = generateThemeForColor('magenta', new Color(0xff33ff), new Color(0x993399), new Color(0x0033ff));
+const indigoTheme = generateThemeForColor('indigo', new Color(0xcc00ff), new Color(0x6666ff), new Color(0x6633ff));
+const darkBlueTheme = generateThemeForColor('deep blue', new Color(0x0033ff), new Color(0xcc9900), new Color(0x00cccc));
+const midBlueTheme = generateThemeForColor('mid blue', new Color(0x6699ff), new Color(0x66cc66), new Color(0x3366ff));
+const lightBlueTheme = generateThemeForColor('light blue', new Color(0x99ccff), new Color(0xff66ff), new Color(0x33ff33));
+const blueGreenTheme = generateThemeForColor('blue-green', new Color(0x00ffff), new Color(0xcc6600), new Color(0x339999));
+const greenTheme = generateThemeForColor('green', new Color(0x00ff00), new Color(0xFF0099), new Color(0x00ff99));
+const yellowGreenTheme = generateThemeForColor('yellow-green', new Color(0x99ffcc), new Color(0xffcc33), new Color(0x33cc00));
+const yellowTheme = generateThemeForColor('yellow', new Color(0xffcc00), new Color(0x3333FF), new Color(0xcccc33));
+const orangeTheme = generateThemeForColor('orange', new Color(0xff6600), new Color(0x33FFFF), new Color(0xff0000));
+const redTheme = generateThemeForColor('red', new Color(0xff0000), new Color(0x99FFcc), new Color(0xff6699));
+const pinkTheme = generateThemeForColor('pink', new Color(0xff99cc), new Color(0xff3333), new Color(0xcc33cc));
 
-const hotdogStandTheme = generateThemeForColor('hotdog stand', new THREE.Color(0xff0000), new THREE.Color(0xffff00));
-const fluorescentTheme = generateThemeForColor('fluorescent', new THREE.Color(0xff00ff), new THREE.Color(0x00ff00));
-const plasmaPowerSaverTheme = generateThemeForColor('plasma power saver', new THREE.Color(0x0000ff), new THREE.Color(0xff00ff), new THREE.Color(0xcc0066));
+const hotdogStandTheme = generateThemeForColor('hotdog stand', new Color(0xff0000), new Color(0xffff00));
+const fluorescentTheme = generateThemeForColor('fluorescent', new Color(0xff00ff), new Color(0x00ff00));
+const plasmaPowerSaverTheme = generateThemeForColor('plasma power saver', new Color(0x0000ff), new Color(0xff00ff), new Color(0xcc0066));
 
 // Light blue gets flowers and some trees 
 [lightBlueTheme].forEach((theme) => {

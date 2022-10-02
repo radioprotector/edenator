@@ -1,5 +1,5 @@
 import { RefObject, useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import { MathUtils, Group, Sprite, CustomBlending, AddEquation, SrcAlphaFactor, OneFactor } from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 
@@ -46,7 +46,7 @@ const MAX_DISTRIBUTION_RADIUS = 20;
 function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
   let nextAvailableGroupIndex = 0;
-  const availableTrebleGroupsRing = useRef<THREE.Group[]>([]);
+  const availableTrebleGroupsRing = useRef<Group[]>([]);
   const trackAnalysis = useStore(state => state.analysis);
   const trebleTheme = useStore(state => state.theme.treble);
   const spriteTexture = useTexture(trebleTheme.spriteTexture);
@@ -57,7 +57,7 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
       return <group
         key={index}
         visible={false}
-        ref={(grp: THREE.Group) => availableTrebleGroupsRing.current[index] = grp}
+        ref={(grp: Group) => availableTrebleGroupsRing.current[index] = grp}
       >
         {/* XXX: Don't change the order/contents without updating the useEffect that looks at the group's children */}
         <sprite
@@ -68,10 +68,10 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
             map={spriteTexture}
             depthWrite={false}
             transparent={true}
-            blending={THREE.CustomBlending}
-            blendEquation={THREE.AddEquation}
-            blendSrc={THREE.SrcAlphaFactor}
-            blendDst={THREE.OneFactor}
+            blending={CustomBlending}
+            blendEquation={AddEquation}
+            blendSrc={SrcAlphaFactor}
+            blendDst={OneFactor}
           />
         </sprite>
         {/* Disable the point light for now */}
@@ -125,7 +125,7 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
       groupForPeak.userData['peak'] = curPeak;
 
       // Randomize the position of the group
-      const angle = trackAnalysis.getTrackSeededRandomInt(0, 359, curPeak.time) * THREE.MathUtils.DEG2RAD;
+      const angle = trackAnalysis.getTrackSeededRandomInt(0, 359, curPeak.time) * MathUtils.DEG2RAD;
       const radius = trackAnalysis.getTrackSeededRandomInt(MIN_DISTRIBUTION_RADIUS, MAX_DISTRIBUTION_RADIUS, curPeak.time);
       
       groupForPeak.position.x = Math.cos(angle) * radius;
@@ -160,20 +160,20 @@ function TrebleQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element
 
       // Make the group visible and lerp it to zoom in
       groupForPeak.visible = true;
-      groupForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, ComponentDepths.TrebleStart, ComponentDepths.TrebleEnd);
+      groupForPeak.position.z = MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, ComponentDepths.TrebleStart, ComponentDepths.TrebleEnd);
 
       // Fade the sprite opacity if we're in the lookahead/decay period
-      const spriteForPeak = groupForPeak.children[0] as THREE.Sprite;
-      // const lightForPeak = groupForPeak.children[1] as THREE.PointLight;
+      const spriteForPeak = groupForPeak.children[0] as Sprite;
+      // const lightForPeak = groupForPeak.children[1] as PointLight;
 
       if (audioTime < peakData.time) {
-        const scale = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakData.time, 0, 1);
+        const scale = MathUtils.mapLinear(audioTime, peakDisplayStart, peakData.time, 0, 1);
 
         spriteForPeak.material.opacity = scale;
         // lightForPeak.intensity = BASE_LIGHT_INTENSITY * scale;
       }
       else if (audioTime > peakData.end) {
-        const scale = THREE.MathUtils.mapLinear(audioTime, peakData.end, peakDisplayEnd, 1, 0);
+        const scale = MathUtils.mapLinear(audioTime, peakData.end, peakDisplayEnd, 1, 0);
 
         spriteForPeak.material.opacity = scale;
         // lightForPeak.intensity = BASE_LIGHT_INTENSITY * scale;

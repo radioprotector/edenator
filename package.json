@@ -51,6 +51,7 @@
   "browserslist": {
     "production": [
       ">1%",
+      "supports es6",
       "supports webgl2",
       "supports audio-api",
       "supports mp3 or supports ogg-vorbis or supports aac or supports flac",

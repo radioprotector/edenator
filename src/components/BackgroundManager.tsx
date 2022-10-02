@@ -1,5 +1,5 @@
 import { RefObject, useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { Vector3, MathUtils, Mesh, Group, LineSegments, BufferGeometry, PlaneGeometry, Material, RepeatWrapping } from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 
@@ -11,8 +11,8 @@ import { ComponentDepths } from './ComponentDepths';
  */
 const FULL_RADIANS = 2 * Math.PI;
 
-function buildLineRingGeometry(innerRadius: number, maxOuterRadius: number, perturbAngle: number): THREE.BufferGeometry {
-  const points: THREE.Vector3[] = [];
+function buildLineRingGeometry(innerRadius: number, maxOuterRadius: number, perturbAngle: number): BufferGeometry {
+  const points: Vector3[] = [];
   const LINE_COUNT = 120;
   const ANGLE_PER_LINE = 360 / LINE_COUNT;
   // Assign a symmetric-ish curve to scale extra lengths by. LINE_COUNT should be divisible by this.
@@ -21,16 +21,16 @@ function buildLineRingGeometry(innerRadius: number, maxOuterRadius: number, pert
   const extraLength = Math.max(maxOuterRadius - innerRadius, 1);
 
   for (let pointNum = 0; pointNum < LINE_COUNT; pointNum++) {
-    const angle = ((pointNum * ANGLE_PER_LINE) + perturbAngle) * THREE.MathUtils.DEG2RAD;
+    const angle = ((pointNum * ANGLE_PER_LINE) + perturbAngle) * MathUtils.DEG2RAD;
     const outerRadius = innerRadius + (extraLength * EXTRA_LENGTH_VALUES[pointNum % EXTRA_LENGTH_BUCKETS]);
     const x = Math.cos(angle);
     const y = Math.sin(angle);
 
-    points.push(new THREE.Vector3(x * innerRadius, y * innerRadius, 0));
-    points.push(new THREE.Vector3(x * outerRadius, y * outerRadius, 0));
+    points.push(new Vector3(x * innerRadius, y * innerRadius, 0));
+    points.push(new Vector3(x * outerRadius, y * outerRadius, 0));
   }
 
-  const geometry = new THREE.BufferGeometry();
+  const geometry = new BufferGeometry();
   geometry.setFromPoints(points);
   return geometry; 
 }
@@ -38,7 +38,7 @@ function buildLineRingGeometry(innerRadius: number, maxOuterRadius: number, pert
 /**
  * A geometry that is intended to act as a backdrop for the entire scene.
  */
-const backdropGeometry = new THREE.PlaneGeometry(4096, 4096);
+const backdropGeometry = new PlaneGeometry(4096, 4096);
 
 function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   // Load background textures
@@ -61,12 +61,12 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     textures.star_third,
     textures.star_third_glow
   ].forEach((tex) => {
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.wrapS = tex.wrapT = RepeatWrapping;
     tex.repeat.setScalar(4);
   });
 
   // For the horizon, we just want to repeat the pixels when available
-  textures.horizon.wrapS = textures.horizon.wrapT = THREE.RepeatWrapping;
+  textures.horizon.wrapS = textures.horizon.wrapT = RepeatWrapping;
 
   const trackAnalysis = useStore(state => state.analysis);
   const backgroundTheme = useStore(state => state.theme.background); 
@@ -93,17 +93,17 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     return trackAnalysis.secondsPerMeasure * 16;
   }, [trackAnalysis]);
 
-  const horizonLayer = useRef<THREE.Mesh>(null!);
-  const firstStarLayer = useRef<THREE.Mesh>(null!);
-  const firstStarGlowLayer = useRef<THREE.Mesh>(null!);
-  const secondStarLayer = useRef<THREE.Mesh>(null!);
-  const secondStarGlowLayer = useRef<THREE.Mesh>(null!);
-  const thirdStarLayer = useRef<THREE.Mesh>(null!);
-  const thirdStarGlowLayer = useRef<THREE.Mesh>(null!);
-  const ringGroup = useRef<THREE.Group>(null!);
-  const firstLineRing = useRef<THREE.LineSegments>(null!);
-  const secondLineRing = useRef<THREE.LineSegments>(null!);
-  const thirdLineRing = useRef<THREE.LineSegments>(null!);
+  const horizonLayer = useRef<Mesh>(null!);
+  const firstStarLayer = useRef<Mesh>(null!);
+  const firstStarGlowLayer = useRef<Mesh>(null!);
+  const secondStarLayer = useRef<Mesh>(null!);
+  const secondStarGlowLayer = useRef<Mesh>(null!);
+  const thirdStarLayer = useRef<Mesh>(null!);
+  const thirdStarGlowLayer = useRef<Mesh>(null!);
+  const ringGroup = useRef<Group>(null!);
+  const firstLineRing = useRef<LineSegments>(null!);
+  const secondLineRing = useRef<LineSegments>(null!);
+  const thirdLineRing = useRef<LineSegments>(null!);
   
   useFrame((state) => {
     state.scene.background = backgroundTheme.fillColor;
@@ -166,21 +166,21 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
     }
 
     // Scale the rings opacity
-    (firstLineRing.current.material as THREE.Material).opacity = 0.5 + ringOpacityFactor;
-    (secondLineRing.current.material as THREE.Material).opacity = 0.4 + ringOpacityFactor;
-    (thirdLineRing.current.material as THREE.Material).opacity = 0.3 + ringOpacityFactor;
+    (firstLineRing.current.material as Material).opacity = 0.5 + ringOpacityFactor;
+    (secondLineRing.current.material as Material).opacity = 0.4 + ringOpacityFactor;
+    (thirdLineRing.current.material as Material).opacity = 0.3 + ringOpacityFactor;
 
     // Ease horizon flashes back down to 0.0, but cut off items that are asymptotically approaching 0 opacity
-    let horizonDampenedOpacity = (horizonLayer.current.material as THREE.Material).opacity * 0.95;
+    let horizonDampenedOpacity = (horizonLayer.current.material as Material).opacity * 0.95;
 
     if (horizonDampenedOpacity <= 0.01) {
       horizonDampenedOpacity = 0;
     }
 
-    (horizonLayer.current.material as THREE.Material).opacity = Math.max(horizonOpacityFactor, horizonDampenedOpacity);
+    (horizonLayer.current.material as Material).opacity = Math.max(horizonOpacityFactor, horizonDampenedOpacity);
 
     // Similarly scale the star "glow" layers
-    let starGlowDampenedOpacity = (firstStarGlowLayer.current.material as THREE.Material).opacity * 0.95;
+    let starGlowDampenedOpacity = (firstStarGlowLayer.current.material as Material).opacity * 0.95;
 
     if (starGlowDampenedOpacity <= 0.01) {
       starGlowDampenedOpacity = 0;
@@ -188,9 +188,9 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
     const newStarGlowOpacity = Math.max(starGlowFactor, starGlowDampenedOpacity);
 
-    (firstStarGlowLayer.current.material as THREE.Material).opacity = newStarGlowOpacity;
-    (secondStarGlowLayer.current.material as THREE.Material).opacity = newStarGlowOpacity;
-    (thirdStarGlowLayer.current.material as THREE.Material).opacity = newStarGlowOpacity;
+    (firstStarGlowLayer.current.material as Material).opacity = newStarGlowOpacity;
+    (secondStarGlowLayer.current.material as Material).opacity = newStarGlowOpacity;
+    (thirdStarGlowLayer.current.material as Material).opacity = newStarGlowOpacity;
 
     // Scale the rings based on our frequency-driven factor
     // If we are just coming off of an increase in scale, we want to ease back to the standard 1.0
@@ -203,7 +203,7 @@ function BackgroundManager(props: { audio: RefObject<HTMLAudioElement>, analyser
 
     // Make the rings appear closer as we get closer to the end of the track
     if (Number.isFinite(currentTrackDuration) && currentTrackDuration > 0) {
-      const ringGroupScale = THREE.MathUtils.mapLinear(currentTrackTime, 0, currentTrackDuration, 1, 2.5);
+      const ringGroupScale = MathUtils.mapLinear(currentTrackTime, 0, currentTrackDuration, 1, 2.5);
       ringGroup.current.scale.x = ringGroup.current.scale.y = ringGroupScale;
     }
   })

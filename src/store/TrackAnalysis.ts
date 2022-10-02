@@ -116,7 +116,7 @@ export class TrackAnalysis
    */
   public getTrackSeededRandomInt(low: number, high: number, seed: number): number {
     // Because our random number seeds aren't as clustered around pi, this should vary *enough* for our purposes
-    // Something like THREE.MathUtils.seededRandom exhibits very little variation between small seed increments of 1,
+    // Something like MathUtils.seededRandom exhibits very little variation between small seed increments of 1,
     // which doesn't work well for our purposes.
     const random = (Math.sin(this.trackHash + seed) + 1) / 2;
 
@@ -132,7 +132,7 @@ export class TrackAnalysis
    */
   public getTrackSeededRandomFloat(min: number, max: number, seed: number) {
     // Because our random number seeds aren't as clustered around pi, this should vary *enough* for our purposes
-    // Something like THREE.MathUtils.seededRandom exhibits very little variation between small seed increments of 1,
+    // Something like MathUtils.seededRandom exhibits very little variation between small seed increments of 1,
     // which doesn't work well for our purposes.
     const random = (Math.sin(this.trackHash + seed) + 1) / 2;
 

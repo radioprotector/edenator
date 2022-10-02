@@ -1,5 +1,5 @@
 import { RefObject, useEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { Vector3, MathUtils, Line, BufferGeometry, LineBasicMaterial } from 'three';
 import { useFrame } from '@react-three/fiber';
 
 import { generateNumericArray } from '../utils';
@@ -9,7 +9,7 @@ import { ComponentDepths } from './ComponentDepths';
 /**
  * The material to use for all frequency lines.
  */
-const frequencyLineMaterial = new THREE.LineBasicMaterial();
+const frequencyLineMaterial = new LineBasicMaterial();
 
 /**
  * The number of frequency rows to display.
@@ -58,7 +58,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
 
   // Construct the set of points to use for each line
   const pointSet = useMemo(() => {
-    const points: THREE.Vector3[] = [];
+    const points: Vector3[] = [];
 
     // Start by adding anchor points on the left-hand side and use a different scale just for the anchors
     // Ideally we want something like
@@ -67,19 +67,19 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
     let currentX = -(anchorIncrement * ANCHOR_POINTS) - (LINE_BUCKETS * BUCKET_WIDTH / 2);
 
     for (let i = 0; i < ANCHOR_POINTS; i++) {
-      points.push(new THREE.Vector3(currentX, 0, 0));
+      points.push(new Vector3(currentX, 0, 0));
       currentX += anchorIncrement;
     }
 
     // Now start distributing the "normal" points around zero
     for(let i = 0; i < LINE_BUCKETS; i++) {
-      points.push(new THREE.Vector3(currentX, 0, 0));
+      points.push(new Vector3(currentX, 0, 0));
       currentX += BUCKET_WIDTH;
     }
 
     // Add the ending anchors
     for (let i = 0; i < ANCHOR_POINTS; i++) {
-      points.push(new THREE.Vector3(currentX, 0, 0));
+      points.push(new Vector3(currentX, 0, 0));
       currentX += anchorIncrement;
     }    
 
@@ -88,18 +88,18 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
 
   // Construct the geometry from those points
   const frequencyGeometry = useMemo(() => {
-    const geometry = new THREE.BufferGeometry();
+    const geometry = new BufferGeometry();
     geometry.setFromPoints(pointSet);
     return geometry;
   }, [pointSet]);
 
   // Construct multiple lines from the geometry
-  const rowLines = useRef<THREE.Line[]>([]);
+  const rowLines = useRef<Line[]>([]);
   const rowElements = useMemo(() => {
     return generateNumericArray(FREQUENCY_ROWS).map((rowIndex) => {
-      const line = new THREE.Line(frequencyGeometry, frequencyLineMaterial);
+      const line = new Line(frequencyGeometry, frequencyLineMaterial);
       line.position.set(0, -10, ComponentDepths.FrequencyEnd + (DEPTH_SPACING * rowIndex));
-      line.scale.set(0.6, THREE.MathUtils.mapLinear(rowIndex, 0, FREQUENCY_ROWS - 1, 1.0, 0.1), 1.0);
+      line.scale.set(0.6, MathUtils.mapLinear(rowIndex, 0, FREQUENCY_ROWS - 1, 1.0, 0.1), 1.0);
 
       // Ensure the line is stored in a mesh
       rowLines.current[rowIndex] = line;

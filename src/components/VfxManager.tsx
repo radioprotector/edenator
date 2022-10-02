@@ -1,10 +1,10 @@
 import { RefObject, useRef } from 'react';
-import * as THREE from 'three';
+import { MathUtils, Mesh } from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, GodRays} from '@react-three/postprocessing';
 import { BloomEffect, GodRaysEffect, BlendFunction, Resizer, KernelSize } from 'postprocessing';
 
-function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: THREE.Mesh }): JSX.Element {
+function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode>, sunMesh: Mesh }): JSX.Element {
   const bloomEffect = useRef<typeof BloomEffect>(null!);
   const godRaysEffect = useRef<typeof GodRaysEffect>(null!);
   const isInVr = useThree((state) => state.gl.xr.enabled);
@@ -25,8 +25,8 @@ function VfxManager(props: { audio: RefObject<HTMLAudioElement>, analyser: RefOb
     if (Number.isFinite(frequencies[5])) {
       const godRaysScale = frequencies[5] / 255.0;
 
-      godRaysMaterial.uniforms.decay.value = THREE.MathUtils.lerp(0.4, 0.93, godRaysScale);
-      godRaysMaterial.uniforms.exposure.value = THREE.MathUtils.lerp(0.4, 0.85, godRaysScale);
+      godRaysMaterial.uniforms.decay.value = MathUtils.lerp(0.4, 0.93, godRaysScale);
+      godRaysMaterial.uniforms.exposure.value = MathUtils.lerp(0.4, 0.85, godRaysScale);
     }
     else {
       godRaysMaterial.uniforms.decay.value = 0.4;

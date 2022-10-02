@@ -1,4 +1,5 @@
 import { useRef, useCallback, useEffect, Suspense, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Stats } from '@react-three/drei';
 
 import { analyzeTrack } from '../store/analyzer';
@@ -11,7 +12,6 @@ import Visualizer from './Visualizer';
 import HapticFeedbackButton from './HapticFeedbackButton';
 import ThemeCyclerButton from './ThemeCyclerButton';
 import ThemeReviewer from './ThemeReviewer';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 function isSafari(): boolean {
   return navigator.userAgent.indexOf('AppleWebKit') > -1 && navigator.userAgent.indexOf('Chrome') === -1;

@@ -1,5 +1,5 @@
 import { RefObject, useEffect } from 'react';
-import * as THREE from 'three';
+import { Vector3, MathUtils, Mesh, SphereGeometry, MeshPhongMaterial } from 'three';
 import { useFrame } from '@react-three/fiber';
 
 import { useStore } from '../store/visualizerStore';
@@ -52,26 +52,26 @@ function getBasePosition(sideIdx: number, beatTheme: BeatTheme): { x: number, y:
     angle += beatTheme.radiansOffset[0];
   }
 
-  return new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(DISTRIBUTION_RADIUS);
+  return new Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(DISTRIBUTION_RADIUS);
 }
 
 /**
  * The geometry to use for all beat meshes.
  */
-const beatGeometry = new THREE.SphereGeometry();
+const beatGeometry = new SphereGeometry();
 
 /**
  * The material to use for all beat meshes.
  */
-const beatMeshMaterial = new THREE.MeshPhongMaterial({ shininess: 0.5 });
+const beatMeshMaterial = new MeshPhongMaterial({ shininess: 0.5 });
 
 /**
  * The ring buffer of available beat meshes.
  */
-const availableMeshesRing: THREE.Mesh[] = [];
+const availableMeshesRing: Mesh[] = [];
 
 for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {
-  const mesh = new THREE.Mesh(beatGeometry, beatMeshMaterial);
+  const mesh = new Mesh(beatGeometry, beatMeshMaterial);
   mesh.visible = false;
 
   availableMeshesRing.push(mesh);
@@ -194,7 +194,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
 
       // Make the mesh visible and lerp it to zoom in
       meshForPeak.visible = true;
-      meshForPeak.position.z = THREE.MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, ComponentDepths.BeatStart, ComponentDepths.BeatEnd);
+      meshForPeak.position.z = MathUtils.mapLinear(audioTime, peakDisplayStart, peakDisplayEnd, ComponentDepths.BeatStart, ComponentDepths.BeatEnd);
 
       // Tweak scaling if we're during the actual beat
       if (audioTime >= peakData.time && audioTime < peakDisplayEnd) {
@@ -204,7 +204,7 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
           lastHapticAudioTime = peakData.end;
         }
 
-        meshForPeak.scale.setScalar(THREE.MathUtils.mapLinear(audioTime, peakData.time, peakDisplayEnd, 1.0, 2.0));
+        meshForPeak.scale.setScalar(MathUtils.mapLinear(audioTime, peakData.time, peakDisplayEnd, 1.0, 2.0));
       }
       else {
         meshForPeak.scale.setScalar(1);

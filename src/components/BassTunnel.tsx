@@ -1,5 +1,5 @@
 import { RefObject, useEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { Vector3, MathUtils, Mesh, Group, LineSegments, BufferGeometry, PlaneGeometry, LineBasicMaterial, MeshBasicMaterial, DoubleSide } from 'three';
 import { useFrame } from '@react-three/fiber';
 
 import { generateNumericArray } from '../utils';
@@ -37,72 +37,72 @@ const SEGMENTS_PER_SIDE = 20;
 // When we normally try to display a standard box geometry using wireframes,
 // it will display each side using two triangles. We want pure lines,
 // so we'll use a set of lines (with appropriate scaling) to approximate quads.
-const boxLineGeometry = new THREE.BufferGeometry();
+const boxLineGeometry = new BufferGeometry();
 
 boxLineGeometry.setFromPoints([
   // Right line, front face
-  new THREE.Vector3(0.5, -0.5, 0.5),
-  new THREE.Vector3(0.5, 0.5, 0.5),
+  new Vector3(0.5, -0.5, 0.5),
+  new Vector3(0.5, 0.5, 0.5),
 
   // Top line, front face
-  new THREE.Vector3(0.5, 0.5, 0.5),
-  new THREE.Vector3(-0.5, 0.5, 0.5),
+  new Vector3(0.5, 0.5, 0.5),
+  new Vector3(-0.5, 0.5, 0.5),
 
   // Left line, front face
-  new THREE.Vector3(-0.5, 0.5, 0.5),
-  new THREE.Vector3(-0.5, -0.5, 0.5),
+  new Vector3(-0.5, 0.5, 0.5),
+  new Vector3(-0.5, -0.5, 0.5),
 
   // Bottom line, front face
-  new THREE.Vector3(-0.5, -0.5, 0.5),
-  new THREE.Vector3(0.5, -0.5, 0.5),
+  new Vector3(-0.5, -0.5, 0.5),
+  new Vector3(0.5, -0.5, 0.5),
 
   // Top-left faces connector
-  new THREE.Vector3(-0.5, 0.5, 0.5),
-  new THREE.Vector3(-0.5, 0.5, -0.5),
+  new Vector3(-0.5, 0.5, 0.5),
+  new Vector3(-0.5, 0.5, -0.5),
 
   // Bottom-left faces connector
-  new THREE.Vector3(-0.5, -0.5, 0.5),
-  new THREE.Vector3(-0.5, -0.5, -0.5),
+  new Vector3(-0.5, -0.5, 0.5),
+  new Vector3(-0.5, -0.5, -0.5),
 
   // Top-right faces connector
-  new THREE.Vector3(0.5, 0.5, 0.5),
-  new THREE.Vector3(0.5, 0.5, -0.5),
+  new Vector3(0.5, 0.5, 0.5),
+  new Vector3(0.5, 0.5, -0.5),
 
   // Bottom-right faces connector
-  new THREE.Vector3(0.5, -0.5, 0.5),
-  new THREE.Vector3(0.5, -0.5, -0.5),
+  new Vector3(0.5, -0.5, 0.5),
+  new Vector3(0.5, -0.5, -0.5),
 
   // Right line, back face
-  new THREE.Vector3(0.5, -0.5, -0.5),
-  new THREE.Vector3(0.5, 0.5, -0.5),
+  new Vector3(0.5, -0.5, -0.5),
+  new Vector3(0.5, 0.5, -0.5),
 
   // Top line, back face
-  new THREE.Vector3(0.5, 0.5, -0.5),
-  new THREE.Vector3(-0.5, 0.5, -0.5),
+  new Vector3(0.5, 0.5, -0.5),
+  new Vector3(-0.5, 0.5, -0.5),
 
   // Left line, back face
-  new THREE.Vector3(-0.5, 0.5, -0.5),
-  new THREE.Vector3(-0.5, -0.5, -0.5),
+  new Vector3(-0.5, 0.5, -0.5),
+  new Vector3(-0.5, -0.5, -0.5),
 
   // Bottom line, back face
-  new THREE.Vector3(-0.5, -0.5, -0.5),
-  new THREE.Vector3(0.5, -0.5, -0.5),
+  new Vector3(-0.5, -0.5, -0.5),
+  new Vector3(0.5, -0.5, -0.5),
 ]);
 
 /**
  * The material to use for all wireframe lines.
  */
-const boxLineMaterial = new THREE.LineBasicMaterial();
+const boxLineMaterial = new LineBasicMaterial();
 
 /**
   * The geometry to use for all filler panels.
   */
-const panelFillGeometry = new THREE.PlaneGeometry();
+const panelFillGeometry = new PlaneGeometry();
  
 /**
   * The material to use for all filler panels.
   */
-const panelFillMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+const panelFillMaterial = new MeshBasicMaterial({ side: DoubleSide, transparent: true, opacity: 0.6 });
 
 const enum SegmentDisplay {
   SegmentHidden = 0,
@@ -124,7 +124,7 @@ const enum SegmentDisplay {
  * @param trackAnalysis The track information.
  * @param currentTrackTime The current track time.
  */
-function randomizeTunnelSegment(segmentIndex: number, segment: THREE.Group, planeForSegment: THREE.Mesh, trackAnalysis: TrackAnalysis, currentTrackTime: number): void {
+function randomizeTunnelSegment(segmentIndex: number, segment: Group, planeForSegment: Mesh, trackAnalysis: TrackAnalysis, currentTrackTime: number): void {
   // In most cases both the segment and filler plane will be visible, so default those.
   segment.visible = true;
   planeForSegment.visible = true;
@@ -219,25 +219,25 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
     []);
 
   // Store references to each tunnel segment group and its constituent elements (box/plane)
-  const tunnelSegments = useRef<THREE.Group[]>([]);
-  const tunnelSegmentBoxes = useRef<THREE.LineSegments[]>([]);
-  const tunnelSegmentPlanes = useRef<THREE.Mesh[]>([]);
+  const tunnelSegments = useRef<Group[]>([]);
+  const tunnelSegmentBoxes = useRef<LineSegments[]>([]);
+  const tunnelSegmentPlanes = useRef<Mesh[]>([]);
 
   const tunnelSegmentElements = useMemo(() => {
     return generateNumericArray(SEGMENTS_PER_SIDE * 2)
       .map((segmentIndex) => {
         return <group
-          ref={(grp: THREE.Group) => tunnelSegments.current[segmentIndex] = grp}
+          ref={(grp: Group) => tunnelSegments.current[segmentIndex] = grp}
           key={segmentIndex}
         >
           <lineSegments
-            ref={(seg: THREE.LineSegments) => tunnelSegmentBoxes.current[segmentIndex] = seg}
+            ref={(seg: LineSegments) => tunnelSegmentBoxes.current[segmentIndex] = seg}
             scale={[SEGMENT_WIDTH, SEGMENT_HEIGHT, SEGMENT_DEPTH]}
             geometry={boxLineGeometry}
             material={boxLineMaterial}
           />
           <mesh
-            ref={(plane: THREE.Mesh) => tunnelSegmentPlanes.current[segmentIndex] = plane}
+            ref={(plane: Mesh) => tunnelSegmentPlanes.current[segmentIndex] = plane}
             geometry={panelFillGeometry}
             material={panelFillMaterial}
           />
@@ -323,10 +323,10 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
       // We are somewhere during this peak period - because of that, update the intensity
       // However, apply it less strongly if we're outside the actual peak
       if (currentTrackTime < curBass.time) {
-        effectiveIntensity = THREE.MathUtils.mapLinear(currentTrackTime, startTime, curBass.time, 0, effectiveIntensity);
+        effectiveIntensity = MathUtils.mapLinear(currentTrackTime, startTime, curBass.time, 0, effectiveIntensity);
       }
       else if (currentTrackTime > curBass.end) {
-        effectiveIntensity = THREE.MathUtils.mapLinear(currentTrackTime, curBass.end, endTime, effectiveIntensity, 0);
+        effectiveIntensity = MathUtils.mapLinear(currentTrackTime, curBass.end, endTime, effectiveIntensity, 0);
       }
 
       // Use Math.max so that if we have multiple concurrent peaks, the strongest peak is what gets used
@@ -355,10 +355,10 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
       // We are somewhere during this peak period - because of that, update the intensity
       // However, apply it less strongly if we're outside the actual peak
       if (currentTrackTime < curSubBass.time) {
-        effectiveIntensity = THREE.MathUtils.mapLinear(currentTrackTime, startTime, curSubBass.time, 0, effectiveIntensity);
+        effectiveIntensity = MathUtils.mapLinear(currentTrackTime, startTime, curSubBass.time, 0, effectiveIntensity);
       }
       else if (currentTrackTime > curSubBass.end) {
-        effectiveIntensity = THREE.MathUtils.mapLinear(currentTrackTime, curSubBass.end, endTime, effectiveIntensity, 0);
+        effectiveIntensity = MathUtils.mapLinear(currentTrackTime, curSubBass.end, endTime, effectiveIntensity, 0);
       }
 
       // Use Math.max so that if we have multiple concurrent peaks, the strongest peak is what gets used

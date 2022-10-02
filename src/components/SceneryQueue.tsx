@@ -1,5 +1,5 @@
 import { RefObject, Suspense, useEffect, useMemo } from 'react';
-import * as THREE from 'three';
+import { MathUtils, Object3D, Mesh, Group, Scene, Material, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { useFrame, useLoader } from '@react-three/fiber';
 
@@ -13,7 +13,7 @@ import { ComponentDepths } from './ComponentDepths';
 /**
  * Maps GLTF-loaded model names to their equivalent scenes.
  */
-type GLTFModelToSceneMap = { [modelName: string]: THREE.Group };
+type GLTFModelToSceneMap = { [modelName: string]: Group };
 
 /**
  * The size of the scenery queue.
@@ -23,22 +23,22 @@ const QUEUE_SIZE = 10;
 /**
  * A material to use for scenery, using the main beat theme color.
  */
-const beatColorMaterial = new THREE.MeshStandardMaterial({ fog: true });
+const beatColorMaterial = new MeshStandardMaterial({ fog: true });
 
 /**
  * A material to use for scenery, using the bass panel theme color.
  */
-const bassColorMaterial = new THREE.MeshStandardMaterial({ fog: true });
+const bassColorMaterial = new MeshStandardMaterial({ fog: true });
 
 /**
  * A material to use for scenery, using the star flash theme color.
  */
- const starFlashColorMaterial = new THREE.MeshStandardMaterial({ fog: true });
+ const starFlashColorMaterial = new MeshStandardMaterial({ fog: true });
 
 /**
  * A wireframe material to use for scenery, using the frequency line theme color.
  */
-const frequencyWireframeMaterial = new THREE.MeshBasicMaterial({ wireframe: true });
+const frequencyWireframeMaterial = new MeshBasicMaterial({ wireframe: true });
 
 /**
  * An array of all available materials to randomly select from.
@@ -56,40 +56,40 @@ const ALL_MATERIALS = [
  * at which time they will contain either a primitive mesh (tracked in {@see sceneryPrimitiveMeshesRing})
  * or a model scene (tracked in {@see sceneryModelScenesRing}) as a sole child.
  */
-const availableSceneryObjectsRing: THREE.Object3D[] = [];
+const availableSceneryObjectsRing: Object3D[] = [];
 
 /**
  * The ring buffer of mesh objects to wrap primitive geometries.
  * Model-based scenery is wrapped in a scene instead and tracked in {@see sceneryModelScenesRing}.
  */
-const sceneryPrimitiveMeshesRing: THREE.Mesh[] = [];
+const sceneryPrimitiveMeshesRing: Mesh[] = [];
 
 /**
  * The ring buffer of scene objects to wrap models.
  * Primitive-based scenery is wrapped in a mesh instead and tracked in {@see sceneryPrimitiveMeshesRing}.
  */
-const sceneryModelScenesRing: THREE.Scene[] = [];
+const sceneryModelScenesRing: Scene[] = [];
 
 for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {
   // Create the ring object
-  const ringObject = new THREE.Object3D();
+  const ringObject = new Object3D();
   ringObject.visible = false;
   ringObject.position.set(SCENERY_HORIZ_OFFSET, SCENERY_VERT_OFFSET, ComponentDepths.SceneryStart);
 
   availableSceneryObjectsRing.push(ringObject);
 
   // Create mesh and scene objects at the same index
-  sceneryPrimitiveMeshesRing.push(new THREE.Mesh());
-  sceneryModelScenesRing.push(new THREE.Scene());
+  sceneryPrimitiveMeshesRing.push(new Mesh());
+  sceneryModelScenesRing.push(new Scene());
 }
 
-function getRandomMaterial(lull: Lull, trackAnalysis: TrackAnalysis): THREE.Material {
+function getRandomMaterial(lull: Lull, trackAnalysis: TrackAnalysis): Material {
   // When getting a random value, use the *end* of the lull to get different seeding results than what we have for geometry.
   const materialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, lull.end);
   return ALL_MATERIALS[materialIndex];
 }
 
-function assignMaterialsToMesh(primitiveMesh: THREE.Mesh, lull: Lull, trackAnalysis: TrackAnalysis): void {
+function assignMaterialsToMesh(primitiveMesh: Mesh, lull: Lull, trackAnalysis: TrackAnalysis): void {
   // If we only have one group, we want to use only one material for the entire mesh
   if (primitiveMesh.geometry.groups.length <= 1) {
     // Randomly assign one of the materials.
@@ -199,10 +199,10 @@ function initializeSceneryObjectLull(ringIdx: number, lullIdx: number, lull: Lul
 
     ringModelScene.traverse((obj) => {
       if (obj.type === 'Scene') {
-        (obj as THREE.Scene).overrideMaterial = overrideMaterial;
+        (obj as Scene).overrideMaterial = overrideMaterial;
       }
       else if (obj.type === 'Mesh') {
-        (obj as THREE.Mesh).material = overrideMaterial;
+        (obj as Mesh).material = overrideMaterial;
       }
     });
 
@@ -263,7 +263,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
     // Erase all custom materials and overwrite with the wireframe material for now
     modelScene.scene.traverse((obj) => {
       if (obj.type === 'Mesh') {
-        (obj as THREE.Mesh).material = frequencyWireframeMaterial;
+        (obj as Mesh).material = frequencyWireframeMaterial;
       }
     });
 
@@ -407,12 +407,12 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
       // Make the mesh visible and lerp it to zoom in
       objForLull.visible = true;
-      objForLull.position.z = THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullDisplayEnd, ComponentDepths.SceneryStart, ComponentDepths.SceneryEnd);
+      objForLull.position.z = MathUtils.mapLinear(audioTime, lullDisplayStart, lullDisplayEnd, ComponentDepths.SceneryStart, ComponentDepths.SceneryEnd);
 
       // If we're in the lookahead period, scale the geometry in so it doesn't pop quite so aggressively.
       // Otherwise, scale based on audio data.
       if (audioTime < lullData.time) {
-        const fadeInScale = THREE.MathUtils.smoothstep(THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullData.time, 0, 1), 0, 1);
+        const fadeInScale = MathUtils.smoothstep(MathUtils.mapLinear(audioTime, lullDisplayStart, lullData.time, 0, 1), 0, 1);
         objForLull.scale.set(1, fadeInScale, 1);
       }
       else {
