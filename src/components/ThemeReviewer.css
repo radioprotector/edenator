@@ -8,7 +8,7 @@
 #themeReviewer {
   display: none;
   position: fixed;
-  width: 100vw;
+  max-width: 100vw;
   height: 100vh;
   overflow: auto;
   color: white;
@@ -22,6 +22,8 @@ table {
   border-collapse: separate;
   border-spacing: 1rem 0.5rem;
   border: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 table th, table td {
@@ -36,10 +38,10 @@ table td {
 /* Separate each colgroup */
 table thead th[scope="colgroup"] {
   padding: 0 1rem;
-  border-right: 2rem solid black;
+  border-right: 1.5rem solid black;
 }
 
 /* Add a CSS class for manually spacing out last "group" cells the same as the colgroups */
 table th.group-end, table td.group-end {
-  border-right: 2rem solid black;
+  border-right: 1.5rem solid black;
 }
