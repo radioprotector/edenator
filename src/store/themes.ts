@@ -1,10 +1,11 @@
 import * as THREE from 'three';
+import { SceneryKey } from './scenery';
 import { OpenKey, TrackAnalysis } from './TrackAnalysis';
 
 /**
  * 360 degrees expressed as radians.
  */
- const FULL_RADIANS = 2 * Math.PI;
+const FULL_RADIANS = 2 * Math.PI;
 
 /**
  * Contains theming information relevant to the BeatQueue component.
@@ -80,6 +81,16 @@ export interface Theme {
      * The color to use for drawing frequency lines.
      */
     lineColor: THREE.Color;
+  },
+
+  /**
+   * Contains theming information relevant to the SceneryQueue component.
+   */
+  scenery: {
+    /**
+     * The items that are available for scenery.
+     */
+    availableItems: SceneryKey[];  
   },
 
   /**
@@ -218,6 +229,38 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
     },
     frequencyGrid: {
       lineColor: new THREE.Color(secondaryColor)
+    },
+    scenery: {
+      availableItems: [
+        SceneryKey.ColumnPrimitive,
+        SceneryKey.ConePrimitive,
+        SceneryKey.CylinderPrimitive,
+        SceneryKey.SphereTopPrimitive,
+        SceneryKey.TorusTopPrimitive,
+        // SceneryKey.CactusShortModel,
+        // SceneryKey.CactusTallModel,
+        // SceneryKey.BambooStageAModel,
+        // SceneryKey.BambooStageBModel,
+        // SceneryKey.CornStageAModel,
+        // SceneryKey.CornStageBModel,
+        // SceneryKey.CornStageCModel,
+        // SceneryKey.StatueBlockModel,
+        // SceneryKey.StatueColumnModel,
+        // SceneryKey.StatueColumnDamagedModel,
+        // SceneryKey.StatueHeadModel,
+        // SceneryKey.StatueObeliskModel,
+        // SceneryKey.StatueRingModel,
+        // SceneryKey.StoneTallBModel,
+        // SceneryKey.StoneTallGModel,
+        // SceneryKey.StoneTallIModel,
+        // SceneryKey.StumpOldTallModel,
+        // SceneryKey.TreePalmBendModel,
+        // SceneryKey.TreePalmTallModel,
+        // SceneryKey.TreePineRoundAModel,
+        // SceneryKey.TreePlateauModel,
+        // SceneryKey.TreeSimpleModel,
+        // SceneryKey.TreeThinModel
+      ]
     },
     background: {
       fillColor: new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.97),

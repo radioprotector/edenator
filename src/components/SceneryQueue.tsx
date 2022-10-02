@@ -1,10 +1,13 @@
 import { RefObject, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { useFrame, useLoader } from '@react-three/fiber';
 
 import { useStore } from '../store/visualizerStore';
 import { TrackAnalysis } from '../store/TrackAnalysis';
+import { SceneryKey, SceneryMap, getSceneryModelUrls, SCENERY_RADIUS, SCENERY_HORIZ_OFFSET, SCENERY_VERT_OFFSET } from '../store/scenery';
 import Lull from '../store/Lull';
+
 import { generateNumericArray } from '../utils';
 import { ComponentDepths } from './ComponentDepths';
 
@@ -12,54 +15,6 @@ import { ComponentDepths } from './ComponentDepths';
  * The size of the scenery queue.
  */
 const QUEUE_SIZE = 10;
-
-/**
- * The base radius to use for scenery geometries.
- */
-const BASE_RADIUS = 150;
-
-/**
- * The x-offset to apply from the center for each scenery item.
- */
-const HORIZ_OFFSET = BASE_RADIUS * 2.5;
-
-/**
- * The y-offset to apply to each scenery item.
- */
-const VERT_OFFSET = -10;
-
-/**
- * A vector to use when no translation is required.
- */
-const NO_TRANSLATION = new THREE.Vector3(0, 0, 0);
-
-/**
- * The collection of geometries that can be used for scenery and the translation to use for it.
- */
-const SCENERY_GEOMETRIES: [THREE.BufferGeometry, THREE.Vector3][] = [
-  [
-    new THREE.ConeGeometry(BASE_RADIUS, BASE_RADIUS * 3, undefined, undefined, true),
-    NO_TRANSLATION
-  ],
-  [
-    // The top half of a sphere - make sure we move it down so it's flush
-    new THREE.SphereGeometry(BASE_RADIUS, undefined, undefined, undefined, undefined, 0, Math.PI / 2),
-    new THREE.Vector3(0, -BASE_RADIUS/2, 0)
-  ],
-  [
-    new THREE.BoxGeometry(BASE_RADIUS, BASE_RADIUS * 5, BASE_RADIUS),
-    NO_TRANSLATION
-  ],
-  [
-    // The top half of a torus - move it down like the sphere and rotate it so it's parallel to the walls
-    new THREE.TorusGeometry(BASE_RADIUS, BASE_RADIUS / 2, undefined, undefined, Math.PI).rotateY(Math.PI / 2),
-    new THREE.Vector3(0, -BASE_RADIUS/1.5, 0)
-  ],
-  [
-    new THREE.CylinderGeometry(BASE_RADIUS, BASE_RADIUS, BASE_RADIUS * 5, undefined, undefined, true),
-    NO_TRANSLATION
-  ]
-];
 
 /**
  * A material to use for scenery, using the main beat theme color.
@@ -88,19 +43,48 @@ const ALL_MATERIALS = [
   frequencyWireframeMaterial
 ];
 
-function assignMaterialsToMesh(mesh: THREE.Mesh, forLull: Lull, trackAnalysis: TrackAnalysis): void {
-  // First, handle when this mesh's geometry only has one group for materials
-  if (mesh.geometry.groups.length <= 1) {
+type GLTFModelToGeometryMap = { [meshName: string]: THREE.BufferGeometry };
+
+// function findMesh(item: THREE.Object3D): THREE.Mesh | null {
+//   // Scan self
+//   if (item.type === 'Mesh') {
+//     return item as THREE.Mesh;
+//   }
+
+//   // Then scan children
+//   for(const child of item.children) {
+//     if (child !== null && child.type === 'Mesh') {
+//       return child as THREE.Mesh
+//     }
+//   }
+
+//   // Then recurse children
+//   for(const child of item.children) {
+//     if (child !== null) {
+//       let childResult = findMesh(child);
+
+//       if (childResult !== null) {
+//         return childResult;
+//       }
+//     }
+//   }
+
+//   // Fall back to null
+//   return null;
+// }
+
+function assignMaterialsToMesh(mesh: THREE.Mesh, isModelMesh: boolean, lull: Lull, trackAnalysis: TrackAnalysis): void {
+  // If this is for a model, or we only have one group, we want to use only one material for the entire mesh
+  if (isModelMesh || mesh.geometry.groups.length <= 1) {
     // Randomly assign one of the materials.
     // When getting a random value, use the end to get different seeding results than what we have for geometry.
-    const materialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, forLull.end);
+    const materialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, lull.end);
     mesh.material = ALL_MATERIALS[materialIndex];
   }
   else {
-
-    // We have multiple groups. Get materials for even/odd groups
-    const evenMaterialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, forLull.end);
-    const oddMaterialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, forLull.end + 1);
+    // We have multiple groups for a primitive. Get materials for even/odd groups
+    const evenMaterialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, lull.end);
+    const oddMaterialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, lull.end + 1);
 
     mesh.material = [];
   
@@ -115,14 +99,101 @@ function assignMaterialsToMesh(mesh: THREE.Mesh, forLull: Lull, trackAnalysis: T
   }
 }
 
+function initializeSceneryMeshForLull(mesh: THREE.Mesh, lullIdx: number, lull: Lull, trackAnalysis: TrackAnalysis, eligibleScenery: SceneryKey[], modelGeometryMap: GLTFModelToGeometryMap): void {
+  mesh.userData['lull'] = lull;
+
+  // Use different seeds for the scenery/position so that all types of scenery can end up either on the left or right
+  const sceneryRandomSeed = lull.time;
+  const positionSeed = lull.time + lullIdx;
+
+  // Randomize the scenery to use for the mesh
+  const sceneryIndex = trackAnalysis.getTrackSeededRandomInt(0, eligibleScenery.length - 1, sceneryRandomSeed);
+  const scenery = SceneryMap[eligibleScenery[sceneryIndex]];
+  let isModelMesh;
+  
+  // Determine if this is using a primitive or a model
+  if (scenery.primitive) {
+    mesh.geometry = scenery.primitive;
+    isModelMesh = false;
+  }
+  else if (scenery.modelName) {
+    // Look up the model of the geometry by name
+    const modelGeometry = modelGeometryMap[scenery.modelName];
+
+    if (!modelGeometry) {
+      console.error('Scenery model does not have geometry!', { key: eligibleScenery[sceneryIndex], scenery });
+      return;
+    }
+
+    mesh.geometry = modelGeometry;
+    isModelMesh = true;
+  }
+  else {
+    console.error('Scenery does not have either a primitive or model path!', { key: eligibleScenery[sceneryIndex], scenery });
+    return;
+  }
+
+  // See if we have geometry-specific translation to apply
+  let geometryXOffset = 0;
+  let geometryYOffset = 0;
+
+  if (scenery.translate) {
+    geometryXOffset = scenery.translate.x;
+    geometryYOffset = scenery.translate.y;
+  }
+
+  // Randomize whether it's on the left or right and apply the geometry-specific offset in the same direction
+  if (trackAnalysis.getTrackSeededRandomInt(0, 1, positionSeed) === 0) {
+    mesh.position.x = SCENERY_HORIZ_OFFSET + geometryXOffset;
+  }
+  else {
+    mesh.position.x = -SCENERY_HORIZ_OFFSET - geometryXOffset;
+  }
+
+  // Reset the vertical offset and apply the geometry-specific offset
+  mesh.position.y = SCENERY_VERT_OFFSET + geometryYOffset;
+
+  // Normalize the scale of the mesh
+  mesh.scale.set(1, 1, 1);
+
+  // Assign materials for each face of the mesh (where appropriate)
+  assignMaterialsToMesh(mesh, isModelMesh, lull, trackAnalysis);
+}
+
 function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
   let nextUnrenderedLullIndex = 0;
   let lastHapticAudioTime = 0;
   let nextAvailableMeshIndex = 0;
+
   const availableSceneryMeshesRing = useRef<THREE.Mesh[]>([]);
   const trackAnalysis = useStore(state => state.analysis);
-
   const hapticManager = useStore().hapticManager;
+  const eligibleSceneryItems = useStore().theme.scenery.availableItems;
+
+  // Ensure all eligible scenery models are loaded
+  const eligibleSceneryModelUrls = getSceneryModelUrls(eligibleSceneryItems);
+  const sceneryModels = useLoader(GLTFLoader, eligibleSceneryModelUrls);
+  const sceneryMeshMap: GLTFModelToGeometryMap = {};
+
+  if (sceneryModels) {
+    for(const sceneryModel of sceneryModels) {
+      // Map to the equivalent mesh
+      const sceneryMesh = sceneryModel.scene.children[0] as THREE.Mesh;
+
+      if (sceneryModel.scene.children.length === 1 && sceneryMesh.type === 'Mesh') {
+        // Bake in scaling for the geometry if this has not yet been performed
+        if (!sceneryMesh.geometry.userData.hasScaled) {
+          sceneryMesh.geometry.scale(SCENERY_RADIUS, SCENERY_RADIUS, SCENERY_RADIUS);
+          sceneryMesh.geometry.userData.hasScaled = true;
+        }
+
+        sceneryMeshMap[sceneryMesh.name] = sceneryMesh.geometry;
+      }
+      else if (process.env.NODE_ENV !== 'production') {
+        console.error('unexpected scenery structure', sceneryModel.scene);
+      }
+    }
+  }
 
   // Make the lookahead period variable based on measure lengths
   const lookaheadPeriod = useMemo(() => {
@@ -136,7 +207,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         key={index}
         visible={false}
         ref={(m: THREE.Mesh) => availableSceneryMeshesRing.current[index] = m}
-        position={[HORIZ_OFFSET, VERT_OFFSET, ComponentDepths.SceneryStart]}
+        position={[SCENERY_HORIZ_OFFSET, SCENERY_VERT_OFFSET, ComponentDepths.SceneryStart]}
       />
     });
 
@@ -213,34 +284,9 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         break;
       }
 
-      // Now we have a new lull to render. Attach the data.
+      // Now we have a new lull to render. Initialize the next mesh in the ring
       const meshForLull = availableSceneryMeshesRing.current[nextAvailableMeshIndex];
-      meshForLull.userData['lull'] = curLull;
-
-      // Use different seeds for the geometry/position so that all types of geometries can end up either on the left or right
-      const geometryRandomSeed = curLull.time;
-      const positionSeed = curLull.time + lullIdx;
-
-      // Randomize the geometry to use for the mesh
-      const geometryIndex = trackAnalysis.getTrackSeededRandomInt(0, SCENERY_GEOMETRIES.length - 1, geometryRandomSeed);
-      meshForLull.geometry = SCENERY_GEOMETRIES[geometryIndex][0];
-
-      // Pull geometry-specific translation information
-      const geometryPosition = SCENERY_GEOMETRIES[geometryIndex][1];
-
-      // Randomize whether it's on the left or right and apply the geometry-specific offset in the same direction
-      if (trackAnalysis.getTrackSeededRandomInt(0, 1, positionSeed) === 0) {
-        meshForLull.position.x = HORIZ_OFFSET + geometryPosition.x;
-      }
-      else {
-        meshForLull.position.x = -HORIZ_OFFSET - geometryPosition.x;
-      }
-
-      // Similarly randomize which material is being used for each face
-      assignMaterialsToMesh(meshForLull, curLull, trackAnalysis);
-
-      // Reset the vertical offset and apply the geometry-specific offset
-      meshForLull.position.y = VERT_OFFSET + geometryPosition.y;
+      initializeSceneryMeshForLull(meshForLull, lullIdx, curLull, trackAnalysis, eligibleSceneryItems, sceneryMeshMap);
       
       // Switch around to the next item in the ring buffer
       nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableSceneryMeshesRing.current.length;
