@@ -1,7 +1,9 @@
 import { useState } from 'react';
 
+import { useStore } from '../store/visualizerStore';
 import { ALL_THEMES, getContrast } from '../store/themes';
 import './ThemeReviewer.css';
+import { SceneryMap } from '../store/scenery';
 
 const RAD2DEG = 180 / Math.PI;
 
@@ -20,14 +22,26 @@ function getColorCell(color: THREE.Color, label: string | null = null, groupEnd:
 }
 
 function ThemeReviewer(): JSX.Element {
+  const currentThemeName = useStore(store => store.theme.name);
   const [reviewerVisible, setReviewerVisible] = useState(false);
 
   const themeRows: JSX.Element[] = ALL_THEMES.map((theme) => {
+    // Calculate beat sides/positions
     const beatPositionAngles = theme.beat.radiansOffset.map((offsetRad) => {
       return (offsetRad * RAD2DEG).toFixed(0) + '°';
     }).join(', ');
-
     const beatPositions = `${theme.beat.sides} [${beatPositionAngles}]`;
+
+    // Calculate theme scenery
+    const sceneryItemNames: string[] = [];
+    for(const sceneryKey of theme.scenery.availableItems) {
+      const item = SceneryMap[sceneryKey];
+      const name = item.modelName ?? item.primitiveDesc;
+
+      if (name && !sceneryItemNames.includes(name)) {
+        sceneryItemNames.push(name);
+      }
+    }
 
     return <tr
       key={theme.name}
@@ -51,14 +65,19 @@ function ThemeReviewer(): JSX.Element {
       {getColorCell(theme.bass.panelColor, 'tertiary')}
       {getColorCell(theme.bass.wireframeColor, null, true)}
 
-      {getColorCell(theme.treble.spriteColor)}
-      {getColorCell(theme.treble.lightColor, null, true)}
+      {getColorCell(theme.treble.spriteColor, null, true)}
 
       {getColorCell(theme.background.sunColor)}
       {getColorCell(theme.background.burstLineColor)}
       {getColorCell(theme.background.starColor)}
       {getColorCell(theme.background.starFlashColor)}
       {getColorCell(theme.background.fillColor, null, true)}
+
+      <td
+        className="group-end"
+        style={{'background': theme.background.fillColor.getStyle()}}>
+        {sceneryItemNames.join(', ')}
+      </td>
     </tr>
   })
 
@@ -71,6 +90,8 @@ function ThemeReviewer(): JSX.Element {
         onClick={() => setReviewerVisible(!reviewerVisible)}
       >
         {reviewerVisible ? "Hide themes" : "Review themes"}
+        &nbsp;
+        (current: {currentThemeName})
       </button>
       <div
         id="themeReviewer"
@@ -104,7 +125,7 @@ function ThemeReviewer(): JSX.Element {
               </th>
               <th
                 scope="colgroup"
-                colSpan={2}
+                colSpan={1} // Was 2 but we're hiding light
               >
                 Treble
               </th>
@@ -113,6 +134,12 @@ function ThemeReviewer(): JSX.Element {
                 colSpan={5}
               >
                 Background
+              </th>
+              <th
+                scope="colgroup"
+                colSpan={1}
+              >
+                Scenery
               </th>
             </tr>
             <tr>
@@ -152,14 +179,11 @@ function ThemeReviewer(): JSX.Element {
                 Wireframe
               </th>
               {/* Treble */}
-              <th scope="col">
-                Sprite
-              </th>
               <th
                 scope="col"
                 className="group-end"
               >
-                <s>Light</s>
+                Sprite
               </th>
               {/* Background */}
               <th scope="col">
@@ -179,6 +203,13 @@ function ThemeReviewer(): JSX.Element {
                 className="group-end"
               >
                 Fill
+              </th>
+              {/* Scenery */}
+              <th
+                scope="col"
+                className="group-end"
+              >
+                Items
               </th>
             </tr>
           </thead>

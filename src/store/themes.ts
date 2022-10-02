@@ -1,11 +1,21 @@
 import * as THREE from 'three';
-import { SceneryKey } from './scenery';
+import { GeometricScenery, SceneryKey } from './scenery';
 import { OpenKey, TrackAnalysis } from './TrackAnalysis';
 
 /**
  * 360 degrees expressed as radians.
  */
 const FULL_RADIANS = 2 * Math.PI;
+
+const BLACK_COLOR = new THREE.Color(0x000000);
+
+const WHITE_COLOR = new THREE.Color(0xFFFFFF);
+
+/**
+ * The threshold against which the color is considered dark enough to support legible white text.
+ * @see {@link https://lesscss.org/functions/#color-operations-contrast}
+ */
+const LIGHT_LUMA_THRESHOLD = 0.43;
 
 /**
  * Contains theming information relevant to the BeatQueue component.
@@ -90,7 +100,7 @@ export interface Theme {
     /**
      * The items that are available for scenery.
      */
-    availableItems: SceneryKey[];  
+    availableItems: readonly SceneryKey[];  
   },
 
   /**
@@ -139,9 +149,6 @@ export interface Theme {
   }
 }
 
-const BLACK_COLOR = new THREE.Color(0x000000);
-const WHITE_COLOR = new THREE.Color(0xFFFFFF);
-
 /**
  * Gets the sRGB value to use in luma calculations for the specified color component.
  * @param floatColor The color component, on a 0.0-1.0 scale.
@@ -168,12 +175,6 @@ function getLumaComponent(floatColor: number): number {
 function getLuma(color: THREE.Color): number {
   return (0.2126 * getLumaComponent(color.r)) + (0.7152 * getLumaComponent(color.g)) + (0.0722 * getLumaComponent(color.b));
 }
-
-/**
- * The threshold against which the color is considered dark enough to support legible white text.
- * @see {@link https://lesscss.org/functions/#color-operations-contrast}
- */
-const LIGHT_LUMA_THRESHOLD = 0.43;
 
 /**
  * Gets a black or white color to contrast against the provided color.
@@ -231,36 +232,7 @@ function generateThemeForColor(name: string, baseColor: THREE.Color, secondaryCo
       lineColor: new THREE.Color(secondaryColor)
     },
     scenery: {
-      availableItems: [
-        SceneryKey.ColumnPrimitive,
-        SceneryKey.ConePrimitive,
-        SceneryKey.CylinderPrimitive,
-        SceneryKey.SphereTopPrimitive,
-        SceneryKey.TorusTopPrimitive,
-        // SceneryKey.CactusShortModel,
-        // SceneryKey.CactusTallModel,
-        // SceneryKey.BambooStageAModel,
-        // SceneryKey.BambooStageBModel,
-        // SceneryKey.CornStageAModel,
-        // SceneryKey.CornStageBModel,
-        // SceneryKey.CornStageCModel,
-        // SceneryKey.StatueBlockModel,
-        // SceneryKey.StatueColumnModel,
-        // SceneryKey.StatueColumnDamagedModel,
-        // SceneryKey.StatueHeadModel,
-        // SceneryKey.StatueObeliskModel,
-        // SceneryKey.StatueRingModel,
-        // SceneryKey.StoneTallBModel,
-        // SceneryKey.StoneTallGModel,
-        // SceneryKey.StoneTallIModel,
-        // SceneryKey.StumpOldTallModel,
-        // SceneryKey.TreePalmBendModel,
-        // SceneryKey.TreePalmTallModel,
-        // SceneryKey.TreePineRoundAModel,
-        // SceneryKey.TreePlateauModel,
-        // SceneryKey.TreeSimpleModel,
-        // SceneryKey.TreeThinModel
-      ]
+      availableItems: GeometricScenery
     },
     background: {
       fillColor: new THREE.Color(baseColor).lerp(BLACK_COLOR, 0.97),
@@ -298,9 +270,106 @@ const hotdogStandTheme = generateThemeForColor('hotdog stand', new THREE.Color(0
 const fluorescentTheme = generateThemeForColor('fluorescent', new THREE.Color(0xff00ff), new THREE.Color(0x00ff00));
 const plasmaPowerSaverTheme = generateThemeForColor('plasma power saver', new THREE.Color(0x0000ff), new THREE.Color(0xff00ff), new THREE.Color(0xcc0066));
 
+// Light blue gets flowers and some trees 
+[lightBlueTheme].forEach((theme) => {
+  theme.scenery.availableItems = [
+    SceneryKey.FlowerAModel,
+    SceneryKey.FlowerAModel,
+    SceneryKey.FlowerBModel,
+    SceneryKey.FlowerBModel,
+    SceneryKey.FlowerCModel,
+    SceneryKey.FlowerCModel,
+    SceneryKey.TreePlateauModel,
+    SceneryKey.TreeSimpleModel,
+    SceneryKey.TreeThinModel,
+  ];
+});
+
+// Blue-green gets an evergreen forest theme with rocks
+[blueGreenTheme].forEach((theme) => {
+  // Double up on some of the entries to make them more likely
+  theme.scenery.availableItems = [
+    SceneryKey.StumpOldTallModel,
+    SceneryKey.StumpRoundDetailedModel,
+    SceneryKey.TreeFatModel,
+    SceneryKey.TreeFatModel,
+    SceneryKey.TreeOakModel,
+    SceneryKey.TreeOakModel,
+    SceneryKey.TreeOakModel,
+    SceneryKey.TreePineRoundAModel,
+    SceneryKey.TreePineRoundAModel,
+    SceneryKey.TreePineRoundAModel,
+    SceneryKey.TreePlateauModel,
+    SceneryKey.TreePlateauModel,
+    SceneryKey.TreeSimpleModel,
+    SceneryKey.TreeSimpleModel,
+    SceneryKey.StoneTallBModel,
+    SceneryKey.StoneTallGModel,
+    SceneryKey.StoneTallIModel
+  ];
+});
+
+// Green gets a forest theme
+[greenTheme].forEach((theme) => {
+  theme.scenery.availableItems = [
+    SceneryKey.StumpOldTallModel,
+    SceneryKey.StumpRoundDetailedModel,
+    SceneryKey.TreeFatModel,
+    SceneryKey.TreeOakModel,
+    SceneryKey.TreePineRoundAModel,
+    SceneryKey.TreePlateauModel,
+    SceneryKey.TreeSimpleModel,
+    SceneryKey.TreeThinModel,
+  ];
+});
+
+// Yellow theme gets a desert theme
+[yellowTheme].forEach((theme) => {
+  // Duplicate some of these keys to make them more likely
+  theme.scenery.availableItems = [
+    SceneryKey.CactusShortModel,
+    SceneryKey.CactusShortModel,
+    SceneryKey.CactusShortModel,
+    SceneryKey.CactusTallModel,
+    SceneryKey.CactusTallModel,
+    SceneryKey.CactusTallModel,
+    SceneryKey.StoneTallBModel,
+    SceneryKey.StoneTallGModel,
+    SceneryKey.StoneTallIModel
+  ];
+});
+
+// Orange theme gets an autumnal theme
+[orangeTheme].forEach((theme) => {
+  theme.scenery.availableItems = [
+    SceneryKey.CornStageAModel,
+    SceneryKey.CornStageAModel,
+    SceneryKey.CornStageBModel,
+    SceneryKey.CornStageBModel,
+    SceneryKey.CornStageCModel,
+    SceneryKey.CornStageCModel,
+    SceneryKey.PumpkinModel,
+    SceneryKey.PumpkinModel,
+    SceneryKey.StumpOldTallModel,
+    SceneryKey.StumpRoundDetailedModel
+  ];
+});
+
+// For magenta, indigo, and plasma power saver themes, use a "vaporwave" style
+[magentaTheme, indigoTheme, plasmaPowerSaverTheme].forEach((theme) => {
+  theme.scenery.availableItems = [
+    SceneryKey.StatueColumnModel,
+    SceneryKey.StatueColumnDamagedModel,
+    SceneryKey.StatueObeliskModel,
+    SceneryKey.StatueBlockModel,
+    SceneryKey.TreePalmTallModel,
+    SceneryKey.TreePalmBendModel
+  ];
+});
+
 // Change certain themes to use 5 or 8 sides for the beat patterns
 [redTheme, orangeTheme, fluorescentTheme].forEach((theme) => {
-  // For 5 sides, alternate between 90 degrees (to align the tip of the star with [0, 1]) and 45 degrees
+  // For 5 sides, alternate between 90 degrees (to align the tip of the star with (x: 0, y: 1) on the unit circle) and 45 degrees
   theme.beat.sides = 5;
   theme.beat.radiansOffset = [FULL_RADIANS / 4, FULL_RADIANS / 8];
 });

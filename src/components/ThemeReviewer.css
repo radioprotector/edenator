@@ -24,6 +24,10 @@ table {
   border: 0;
 }
 
+table th, table td {
+  white-space: nowrap;
+}
+
 table td {
   border: 0;
   width: 5vw;

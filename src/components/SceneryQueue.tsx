@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useMemo } from 'react';
+import { RefObject, Suspense, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { useFrame, useLoader } from '@react-three/fiber';
@@ -113,7 +113,7 @@ function assignMaterialsToMesh(primitiveMesh: THREE.Mesh, lull: Lull, trackAnaly
   }
 }
 
-function initializeSceneryObjectLull(ringIdx: number, lullIdx: number, lull: Lull, trackAnalysis: TrackAnalysis, eligibleScenery: SceneryKey[], modelSceneMap: GLTFModelToSceneMap): void {
+function initializeSceneryObjectLull(ringIdx: number, lullIdx: number, lull: Lull, trackAnalysis: TrackAnalysis, eligibleScenery: readonly SceneryKey[], modelSceneMap: GLTFModelToSceneMap): void {
   // Get the object from the ring buffer
   const ringObj = availableSceneryObjectsRing[ringIdx];
 
@@ -147,6 +147,14 @@ function initializeSceneryObjectLull(ringIdx: number, lullIdx: number, lull: Lul
       ringPrimitiveMesh.scale.set(1, 1, 1);
     }
 
+    // Apply rotation to the scene if needed
+    if (scenery.rotate) {
+      ringPrimitiveMesh.rotation.copy(scenery.rotate);
+    }
+    else {
+      ringPrimitiveMesh.rotation.set(0, 0, 0);
+    }
+
     // Add that mesh as a child of the ring object.
     ringObj.add(ringPrimitiveMesh);
   }
@@ -175,6 +183,14 @@ function initializeSceneryObjectLull(ringIdx: number, lullIdx: number, lull: Lul
     }
     else {
       ringModelScene.scale.set(1, 1, 1);
+    }
+
+    // Apply rotation to the scene if needed
+    if (scenery.rotate) {
+      ringModelScene.rotation.copy(scenery.rotate);
+    }
+    else {
+      ringModelScene.rotation.set(0, 0, 0);
     }
 
     // Assign a random material.
@@ -304,6 +320,11 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       lastHapticAudioTime = 0;
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextAvailableMeshIndex = 0;
+
+      // Hide all items in the ring - necessary ones will be displayed in the next render loop
+      for(const ringObj of availableSceneryObjectsRing) {
+        ringObj.visible = false;
+      }
     }),
     []);
 
@@ -415,14 +436,16 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
   });
 
   return (
-    <group>
-      {availableSceneryObjectsRing.map((obj, index) => {
-        return <primitive
-          key={index}
-          object={obj}
-        />
-      })}
-    </group>
+    <Suspense fallback={null}>
+      <group>
+        {availableSceneryObjectsRing.map((obj, index) => {
+          return <primitive
+            key={index}
+            object={obj}
+          />
+        })}
+      </group>
+    </Suspense>
   );
 }
 
