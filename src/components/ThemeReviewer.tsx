@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { Color } from 'three';
 
 import { useStore } from '../store/visualizerStore';
 import { ALL_THEMES, getContrast } from '../store/themes';
-import './ThemeReviewer.css';
 import { SceneryMap } from '../store/scenery';
+
+import './ThemeReviewer.css';
 
 const RAD2DEG = 180 / Math.PI;
 
-function getColorCell(color: THREE.Color, label: string | null = null, groupEnd: boolean = false): JSX.Element {
+function getColorCell(color: Color, label: string | null = null, groupEnd: boolean = false): JSX.Element {
   return <td
     style={{
       'background': color.getStyle(), 
