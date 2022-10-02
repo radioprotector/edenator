@@ -124,13 +124,17 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
       
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextAvailableMeshIndex = 0;
-
-      // Hide all items in the ring - necessary ones will be displayed in the next render loop
-      for(const ringObj of availableMeshesRing) {
-        ringObj.visible = false;
-      }
     }),
     []);
+
+  // Initially hide all items in the ring buffer - necessary items will be displayed in the next render loop
+  for(const ringObj of availableMeshesRing) {
+    ringObj.visible = false;
+
+    if ('peak' in ringObj.userData) {
+      delete ringObj.userData['peak'];
+    }
+  }
 
   useFrame((_state, delta) => {
     if (props.audio.current === null) {

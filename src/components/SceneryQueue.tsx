@@ -245,7 +245,7 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
   const trackAnalysis = useStore(state => state.analysis);
   const hapticManager = useStore.getState().hapticManager;
-  const eligibleSceneryItems = useStore.getState().theme.scenery.availableItems;
+  const eligibleSceneryItems = useStore(state => state.theme.scenery.availableItems);
 
   // Ensure all eligible scenery models are loaded
   const eligibleSceneryModelUrls = getSceneryModelUrls(eligibleSceneryItems);
@@ -320,13 +320,17 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
       lastHapticAudioTime = 0;
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nextAvailableMeshIndex = 0;
-
-      // Hide all items in the ring - necessary ones will be displayed in the next render loop
-      for(const ringObj of availableSceneryObjectsRing) {
-        ringObj.visible = false;
-      }
     }),
     []);
+
+  // Initially hide all items in the ring buffer - necessary items will be displayed in the next render loop
+  for(const ringObj of availableSceneryObjectsRing) {
+    ringObj.visible = false;
+
+    if ('lull' in ringObj.userData) {
+      delete ringObj.userData['lull'];
+    }
+  }
 
   useFrame((_state, delta) => {
     if (props.audio.current === null) {
