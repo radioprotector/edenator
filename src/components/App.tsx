@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, Suspense, useState } from 'react';
+import { useRef, useCallback, Suspense, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Stats } from '@react-three/drei';
 
@@ -194,19 +194,6 @@ function App(): JSX.Element {
         })
     }
   };
-
-  // Update the page title based on the currently playing song
-  useEffect(() => useStore.subscribe(
-    (state) => state.analysis, 
-    (newAnalysis) => {
-      if (newAnalysis !== null && !newAnalysis.isEmpty && newAnalysis.artist !== '' && newAnalysis.title !== '') {
-        document.title = `Edenator (${newAnalysis.artist} - ${newAnalysis.title})`;
-      }
-      else {
-        document.title = 'Edenator';
-      }
-    }),
-    []);
 
   return (
     <div>

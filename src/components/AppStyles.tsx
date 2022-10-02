@@ -30,6 +30,20 @@ const secondStarPath = new Path2D('M44.075,49.242L45.903,47.762L46.921,49.02L47.
 function AppStyles(): JSX.Element {
   const uiTheme = useStore((state) => state.theme.ui);
 
+  // Update the page title based on the currently playing song
+  useEffect(() => useStore.subscribe(
+    (state) => state.analysis, 
+    (newAnalysis) => {
+      if (newAnalysis !== null && !newAnalysis.isEmpty && newAnalysis.artist !== '' && newAnalysis.title !== '') {
+        document.title = `Edenator (${newAnalysis.artist} - ${newAnalysis.title})`;
+      }
+      else {
+        document.title = 'Edenator';
+      }
+    }),
+    []);
+
+  // Update the app theme color and icon when the theme changes
   useEffect(() => useStore.subscribe(
     (state) => state.theme.ui,
     (newUiTheme) => {
