@@ -1,15 +1,19 @@
-import { RefObject, useEffect, useMemo, useRef } from 'react';
+import { RefObject, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { useFrame, useLoader } from '@react-three/fiber';
 
 import { useStore } from '../store/visualizerStore';
 import { TrackAnalysis } from '../store/TrackAnalysis';
-import { SceneryKey, SceneryMap, getSceneryModelUrls, SCENERY_RADIUS, SCENERY_HORIZ_OFFSET, SCENERY_VERT_OFFSET } from '../store/scenery';
+import { SceneryKey, SceneryMap, getSceneryModelUrls, SCENERY_HORIZ_OFFSET, SCENERY_VERT_OFFSET } from '../store/scenery';
 import Lull from '../store/Lull';
 
-import { generateNumericArray } from '../utils';
 import { ComponentDepths } from './ComponentDepths';
+
+/**
+ * Maps GLTF-loaded model names to their equivalent scenes.
+ */
+type GLTFModelToSceneMap = { [modelName: string]: THREE.Group };
 
 /**
  * The size of the scenery queue.
@@ -36,6 +40,9 @@ const bassColorMaterial = new THREE.MeshStandardMaterial({ fog: true });
  */
 const frequencyWireframeMaterial = new THREE.MeshBasicMaterial({ wireframe: true });
 
+/**
+ * An array of all available materials to randomly select from.
+ */
 const ALL_MATERIALS = [
   beatColorMaterial,
   bassColorMaterial,
@@ -43,90 +50,148 @@ const ALL_MATERIALS = [
   frequencyWireframeMaterial
 ];
 
-type GLTFModelToGeometryMap = { [meshName: string]: THREE.BufferGeometry };
+/**
+ * The ring buffer of available scenery objects.
+ * These are added to the scene and rendered in to represent scenery when needed,
+ * at which time they will contain either a primitive mesh (tracked in {@see sceneryPrimitiveMeshesRing})
+ * or a model scene (tracked in {@see sceneryModelScenesRing}) as a sole child.
+ */
+const availableSceneryObjectsRing: THREE.Object3D[] = [];
 
-// function findMesh(item: THREE.Object3D): THREE.Mesh | null {
-//   // Scan self
-//   if (item.type === 'Mesh') {
-//     return item as THREE.Mesh;
-//   }
+/**
+ * The ring buffer of mesh objects to wrap primitive geometries.
+ * Model-based scenery is wrapped in a scene instead and tracked in {@see sceneryModelScenesRing}.
+ */
+const sceneryPrimitiveMeshesRing: THREE.Mesh[] = [];
 
-//   // Then scan children
-//   for(const child of item.children) {
-//     if (child !== null && child.type === 'Mesh') {
-//       return child as THREE.Mesh
-//     }
-//   }
+/**
+ * The ring buffer of scene objects to wrap models.
+ * Primitive-based scenery is wrapped in a mesh instead and tracked in {@see sceneryPrimitiveMeshesRing}.
+ */
+const sceneryModelScenesRing: THREE.Scene[] = [];
 
-//   // Then recurse children
-//   for(const child of item.children) {
-//     if (child !== null) {
-//       let childResult = findMesh(child);
+for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {
+  // Create the ring object
+  const ringObject = new THREE.Object3D();
+  ringObject.visible = false;
+  ringObject.position.set(SCENERY_HORIZ_OFFSET, SCENERY_VERT_OFFSET, ComponentDepths.SceneryStart);
 
-//       if (childResult !== null) {
-//         return childResult;
-//       }
-//     }
-//   }
+  availableSceneryObjectsRing.push(ringObject);
 
-//   // Fall back to null
-//   return null;
-// }
+  // Create mesh and scene objects at the same index
+  sceneryPrimitiveMeshesRing.push(new THREE.Mesh());
+  sceneryModelScenesRing.push(new THREE.Scene());
+}
 
-function assignMaterialsToMesh(mesh: THREE.Mesh, isModelMesh: boolean, lull: Lull, trackAnalysis: TrackAnalysis): void {
-  // If this is for a model, or we only have one group, we want to use only one material for the entire mesh
-  if (isModelMesh || mesh.geometry.groups.length <= 1) {
+function getRandomMaterial(lull: Lull, trackAnalysis: TrackAnalysis): THREE.Material {
+  // When getting a random value, use the *end* of the lull to get different seeding results than what we have for geometry.
+  const materialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, lull.end);
+  return ALL_MATERIALS[materialIndex];
+}
+
+function assignMaterialsToMesh(primitiveMesh: THREE.Mesh, lull: Lull, trackAnalysis: TrackAnalysis): void {
+  // If we only have one group, we want to use only one material for the entire mesh
+  if (primitiveMesh.geometry.groups.length <= 1) {
     // Randomly assign one of the materials.
-    // When getting a random value, use the end to get different seeding results than what we have for geometry.
-    const materialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, lull.end);
-    mesh.material = ALL_MATERIALS[materialIndex];
+    primitiveMesh.material = getRandomMaterial(lull, trackAnalysis);
   }
   else {
     // We have multiple groups for a primitive. Get materials for even/odd groups
     const evenMaterialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, lull.end);
     const oddMaterialIndex = trackAnalysis.getTrackSeededRandomInt(0, ALL_MATERIALS.length - 1, lull.end + 1);
 
-    mesh.material = [];
+    primitiveMesh.material = [];
   
-    for (let groupIndex = 0; groupIndex < mesh.geometry.groups.length; groupIndex++) {
+    for (let groupIndex = 0; groupIndex < primitiveMesh.geometry.groups.length; groupIndex++) {
       if (groupIndex % 2 === 0) {
-        mesh.material[groupIndex] = ALL_MATERIALS[evenMaterialIndex];
+        primitiveMesh.material[groupIndex] = ALL_MATERIALS[evenMaterialIndex];
       }
       else {
-        mesh.material[groupIndex] = ALL_MATERIALS[oddMaterialIndex];
+        primitiveMesh.material[groupIndex] = ALL_MATERIALS[oddMaterialIndex];
       } 
     }
   }
 }
 
-function initializeSceneryMeshForLull(mesh: THREE.Mesh, lullIdx: number, lull: Lull, trackAnalysis: TrackAnalysis, eligibleScenery: SceneryKey[], modelGeometryMap: GLTFModelToGeometryMap): void {
-  mesh.userData['lull'] = lull;
+function initializeSceneryObjectLull(ringIdx: number, lullIdx: number, lull: Lull, trackAnalysis: TrackAnalysis, eligibleScenery: SceneryKey[], modelSceneMap: GLTFModelToSceneMap): void {
+  // Get the object from the ring buffer
+  const ringObj = availableSceneryObjectsRing[ringIdx];
+
+  // Associate the lull and clear any children it may currently have.
+  ringObj.userData['lull'] = lull;
+  ringObj.clear();
 
   // Use different seeds for the scenery/position so that all types of scenery can end up either on the left or right
   const sceneryRandomSeed = lull.time;
   const positionSeed = lull.time + lullIdx;
 
-  // Randomize the scenery to use for the mesh
+  // Randomize the scenery to use for the object
   const sceneryIndex = trackAnalysis.getTrackSeededRandomInt(0, eligibleScenery.length - 1, sceneryRandomSeed);
   const scenery = SceneryMap[eligibleScenery[sceneryIndex]];
-  let isModelMesh;
-  
+
   // Determine if this is using a primitive or a model
   if (scenery.primitive) {
-    mesh.geometry = scenery.primitive;
-    isModelMesh = false;
+    // This is using a primitive. Pull the corresponding mesh from the ring index.
+    const ringPrimitiveMesh = sceneryPrimitiveMeshesRing[ringIdx];
+
+    // Update the mesh's geometry and material
+    ringPrimitiveMesh.geometry = scenery.primitive;
+    assignMaterialsToMesh(ringPrimitiveMesh, lull, trackAnalysis);
+
+    // Apply scaling to the mesh if needed.
+    // This is distinct from the *ring object* scale, which is lerped during the animation process
+    if (scenery.scale) {
+      ringPrimitiveMesh.scale.copy(scenery.scale);
+    }
+    else {
+      ringPrimitiveMesh.scale.set(1, 1, 1);
+    }
+
+    // Add that mesh as a child of the ring object.
+    ringObj.add(ringPrimitiveMesh);
   }
   else if (scenery.modelName) {
-    // Look up the model of the geometry by name
-    const modelGeometry = modelGeometryMap[scenery.modelName];
+    // This is using a scene. Pull the corresponding scene from the ring index.
+    const ringModelScene = sceneryModelScenesRing[ringIdx];
 
-    if (!modelGeometry) {
+    // Look up the scene to use for the specified model name.
+    const gltfScene = modelSceneMap[scenery.modelName];
+
+    if (!gltfScene) {
       console.error('Scenery model does not have geometry!', { key: eligibleScenery[sceneryIndex], scenery });
       return;
     }
 
-    mesh.geometry = modelGeometry;
-    isModelMesh = true;
+    // Copy the GLTF scene to the scene in the ring buffer
+    ringModelScene.clear();
+    for(const gltfChild of gltfScene.children) {
+      ringModelScene.add(gltfChild.clone(true));
+    }
+
+    // Apply scaling to the scene if needed.
+    // This is distinct from the *ring object* scale, which is lerped during the animation process
+    if (scenery.scale) {
+      ringModelScene.scale.copy(scenery.scale);
+    }
+    else {
+      ringModelScene.scale.set(1, 1, 1);
+    }
+
+    // Assign a random material.
+    // Ensure that we are handling this across scene boundaries by traversing the object: https://github.com/mrdoob/three.js/issues/18342
+    const overrideMaterial = getRandomMaterial(lull, trackAnalysis);
+
+    ringModelScene.traverse((obj) => {
+      if (obj.type === 'Scene') {
+        (obj as THREE.Scene).overrideMaterial = overrideMaterial;
+      }
+      else if (obj.type === 'Mesh') {
+        (obj as THREE.Mesh).material = overrideMaterial;
+      }
+    });
+
+    // Add this scene as a child of the ring object
+    ringObj.add(ringModelScene);
   }
   else {
     console.error('Scenery does not have either a primitive or model path!', { key: eligibleScenery[sceneryIndex], scenery });
@@ -144,20 +209,17 @@ function initializeSceneryMeshForLull(mesh: THREE.Mesh, lullIdx: number, lull: L
 
   // Randomize whether it's on the left or right and apply the geometry-specific offset in the same direction
   if (trackAnalysis.getTrackSeededRandomInt(0, 1, positionSeed) === 0) {
-    mesh.position.x = SCENERY_HORIZ_OFFSET + geometryXOffset;
+    ringObj.position.x = SCENERY_HORIZ_OFFSET + geometryXOffset;
   }
   else {
-    mesh.position.x = -SCENERY_HORIZ_OFFSET - geometryXOffset;
+    ringObj.position.x = -SCENERY_HORIZ_OFFSET - geometryXOffset;
   }
 
   // Reset the vertical offset and apply the geometry-specific offset
-  mesh.position.y = SCENERY_VERT_OFFSET + geometryYOffset;
+  ringObj.position.y = SCENERY_VERT_OFFSET + geometryYOffset;
 
-  // Normalize the scale of the mesh
-  mesh.scale.set(1, 1, 1);
-
-  // Assign materials for each face of the mesh (where appropriate)
-  assignMaterialsToMesh(mesh, isModelMesh, lull, trackAnalysis);
+  // Normalize the scale of the ring object
+  ringObj.scale.set(1, 1, 1);
 }
 
 function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: RefObject<AnalyserNode> }): JSX.Element {
@@ -165,51 +227,38 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
   let lastHapticAudioTime = 0;
   let nextAvailableMeshIndex = 0;
 
-  const availableSceneryMeshesRing = useRef<THREE.Mesh[]>([]);
   const trackAnalysis = useStore(state => state.analysis);
   const hapticManager = useStore().hapticManager;
   const eligibleSceneryItems = useStore().theme.scenery.availableItems;
 
   // Ensure all eligible scenery models are loaded
   const eligibleSceneryModelUrls = getSceneryModelUrls(eligibleSceneryItems);
-  const sceneryModels = useLoader(GLTFLoader, eligibleSceneryModelUrls);
-  const sceneryMeshMap: GLTFModelToGeometryMap = {};
+  const sceneryMeshMap: GLTFModelToSceneMap = {};
+  
+  useLoader(GLTFLoader, eligibleSceneryModelUrls).forEach((modelScene, index) => {
+    // HACK: Because the model loading results don't actually give us information about the file name of whatever produced the scene,
+    // we're backfilling this by mapping the index of the result to the collection of URLs.
+    const modelUrl = eligibleSceneryModelUrls[index];
+    let modelFileName =  modelUrl.substring(modelUrl.lastIndexOf('/') + 1);
 
-  if (sceneryModels) {
-    for(const sceneryModel of sceneryModels) {
-      // Map to the equivalent mesh
-      const sceneryMesh = sceneryModel.scene.children[0] as THREE.Mesh;
+    // Trim the ending ".glb"
+    modelFileName = modelFileName.substring(0, modelFileName.lastIndexOf('.'));
 
-      if (sceneryModel.scene.children.length === 1 && sceneryMesh.type === 'Mesh') {
-        // Bake in scaling for the geometry if this has not yet been performed
-        if (!sceneryMesh.geometry.userData.hasScaled) {
-          sceneryMesh.geometry.scale(SCENERY_RADIUS, SCENERY_RADIUS, SCENERY_RADIUS);
-          sceneryMesh.geometry.userData.hasScaled = true;
-        }
-
-        sceneryMeshMap[sceneryMesh.name] = sceneryMesh.geometry;
+    // Erase all custom materials and overwrite with the wireframe material for now
+    modelScene.scene.traverse((obj) => {
+      if (obj.type === 'Mesh') {
+        (obj as THREE.Mesh).material = frequencyWireframeMaterial;
       }
-      else if (process.env.NODE_ENV !== 'production') {
-        console.error('unexpected scenery structure', sceneryModel.scene);
-      }
-    }
-  }
+    });
+
+    // Add this to the map
+    sceneryMeshMap[modelFileName] = modelScene.scene;
+  });
 
   // Make the lookahead period variable based on measure lengths
   const lookaheadPeriod = useMemo(() => {
     return trackAnalysis.secondsPerMeasure;
   }, [trackAnalysis]);
-
-  // Generate available sprites for use in a ring buffer
-  const availableMeshElements = 
-    generateNumericArray(QUEUE_SIZE).map((index) => {
-      return <mesh
-        key={index}
-        visible={false}
-        ref={(m: THREE.Mesh) => availableSceneryMeshesRing.current[index] = m}
-        position={[SCENERY_HORIZ_OFFSET, SCENERY_VERT_OFFSET, ComponentDepths.SceneryStart]}
-      />
-    });
 
   // Because the scenery material is cached across multiple renders, just ensure the color reflects the state.
   beatColorMaterial.color = useStore().theme.beat.color;
@@ -284,12 +333,11 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         break;
       }
 
-      // Now we have a new lull to render. Initialize the next mesh in the ring
-      const meshForLull = availableSceneryMeshesRing.current[nextAvailableMeshIndex];
-      initializeSceneryMeshForLull(meshForLull, lullIdx, curLull, trackAnalysis, eligibleSceneryItems, sceneryMeshMap);
+      // Now we have a new lull to render. Initialize the scenery object
+      initializeSceneryObjectLull(nextAvailableMeshIndex, lullIdx, curLull, trackAnalysis, eligibleSceneryItems, sceneryMeshMap);
       
       // Switch around to the next item in the ring buffer
-      nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableSceneryMeshesRing.current.length;
+      nextAvailableMeshIndex = (nextAvailableMeshIndex + 1) % availableSceneryObjectsRing.length;
 
       // Ensure we're rendering the next lull
       nextUnrenderedLullIndex++;
@@ -313,12 +361,12 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
     }
 
     // Now update the items in the ring buffer
-    for (let itemIdx = 0; itemIdx < availableSceneryMeshesRing.current.length; itemIdx++) {
-      const meshForLull = availableSceneryMeshesRing.current[itemIdx];
-      const lullData = meshForLull.userData['lull'] as Lull;
+    for (let itemIdx = 0; itemIdx < availableSceneryObjectsRing.length; itemIdx++) {
+      const objForLull = availableSceneryObjectsRing[itemIdx];
+      const lullData = objForLull.userData['lull'] as Lull;
 
       if (lullData === null || lullData === undefined) {
-        meshForLull.visible = false;
+        objForLull.visible = false;
         continue;
       }
 
@@ -327,20 +375,20 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
       // See if we've finished displaying
       if (lullDisplayStart > audioTime || lullDisplayEnd < lastRenderTime) {
-        meshForLull.visible = false;
-        delete meshForLull.userData['lull'];
+        objForLull.visible = false;
+        delete objForLull.userData['lull'];
         continue;
       }
 
       // Make the mesh visible and lerp it to zoom in
-      meshForLull.visible = true;
-      meshForLull.position.z = THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullDisplayEnd, ComponentDepths.SceneryStart, ComponentDepths.SceneryEnd);
+      objForLull.visible = true;
+      objForLull.position.z = THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullDisplayEnd, ComponentDepths.SceneryStart, ComponentDepths.SceneryEnd);
 
       // If we're in the lookahead period, scale the geometry in so it doesn't pop quite so aggressively.
       // Otherwise, scale based on audio data.
       if (audioTime < lullData.time) {
         const fadeInScale = THREE.MathUtils.smoothstep(THREE.MathUtils.mapLinear(audioTime, lullDisplayStart, lullData.time, 0, 1), 0, 1);
-        meshForLull.scale.set(1, fadeInScale, 1);
+        objForLull.scale.set(1, fadeInScale, 1);
       }
       else {
         // We are in the period where the lull has officially started.
@@ -351,14 +399,14 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
         }
 
         // When scaling based on audio values, apply easing factors in either direction to minimize suddenness
-        const easedDownXScale = meshForLull.scale.x * 0.995;
-        const easedDownYScale = meshForLull.scale.y * 0.995;
-        const easedDownZScale = meshForLull.scale.z * 0.995;
-        const easedUpXScale = meshForLull.scale.x * 1.0025;
-        const easedUpYScale = meshForLull.scale.y * 1.0025;
-        const easedUpZScale = meshForLull.scale.z * 1.0025;
+        const easedDownXScale = objForLull.scale.x * 0.995;
+        const easedDownYScale = objForLull.scale.y * 0.995;
+        const easedDownZScale = objForLull.scale.z * 0.995;
+        const easedUpXScale = objForLull.scale.x * 1.0025;
+        const easedUpYScale = objForLull.scale.y * 1.0025;
+        const easedUpZScale = objForLull.scale.z * 1.0025;
 
-        meshForLull.scale.set(
+        objForLull.scale.set(
           Math.max(easedDownXScale, Math.min(easedUpXScale, 1.0 + widthAndDepthScalingFactor)),
           Math.max(easedDownYScale, Math.min(easedUpYScale, 1.0 + verticalScalingFactor)),
           Math.max(easedDownZScale, Math.min(easedUpZScale, 1.0 + widthAndDepthScalingFactor)));
@@ -368,7 +416,12 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
 
   return (
     <group>
-      {availableMeshElements}
+      {availableSceneryObjectsRing.map((obj, index) => {
+        return <primitive
+          key={index}
+          object={obj}
+        />
+      })}
     </group>
   );
 }
