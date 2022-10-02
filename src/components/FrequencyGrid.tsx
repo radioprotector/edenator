@@ -47,7 +47,7 @@ function FrequencyGrid(props: { audio: RefObject<HTMLAudioElement>, analyser: Re
   const trackAnalysis = useStore(state => state.analysis);
 
   // Because the line material is cached across multiple renders, just ensure the color reflects the state.
-  frequencyLineMaterial.color = useStore().theme.frequencyGrid.lineColor;
+  frequencyLineMaterial.color = useStore.getState().theme.frequencyGrid.lineColor;
 
   useEffect(() => useStore.subscribe(
     state => state.theme.frequencyGrid.lineColor,

@@ -81,11 +81,11 @@ function BeatQueue(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element {
   let nextUnrenderedPeakIndex = 0;
   let lastHapticAudioTime = 0;
   let nextAvailableMeshIndex = 0;
-  const hapticManager = useStore().hapticManager;
+  const hapticManager = useStore.getState().hapticManager;
   const trackAnalysis = useStore(state => state.analysis);
 
   // Because the beat items are cached across multiple renders, start by ensuring that the color and position match the state
-  const beatTheme = useStore().theme.beat;
+  const beatTheme = useStore.getState().theme.beat;
 
   beatMeshMaterial.color = beatTheme.color;
   for(let meshIdx = 0; meshIdx < QUEUE_SIZE; meshIdx++) {

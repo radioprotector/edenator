@@ -244,8 +244,8 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
   let nextAvailableMeshIndex = 0;
 
   const trackAnalysis = useStore(state => state.analysis);
-  const hapticManager = useStore().hapticManager;
-  const eligibleSceneryItems = useStore().theme.scenery.availableItems;
+  const hapticManager = useStore.getState().hapticManager;
+  const eligibleSceneryItems = useStore.getState().theme.scenery.availableItems;
 
   // Ensure all eligible scenery models are loaded
   const eligibleSceneryModelUrls = getSceneryModelUrls(eligibleSceneryItems);
@@ -277,10 +277,10 @@ function SceneryQueue(props: { audio: RefObject<HTMLAudioElement>, analyser: Ref
   }, [trackAnalysis]);
 
   // Because the scenery material is cached across multiple renders, just ensure the color reflects the state.
-  beatColorMaterial.color = useStore().theme.beat.color;
-  bassColorMaterial.color = useStore().theme.bass.panelColor;
-  starFlashColorMaterial.color = useStore().theme.background.starFlashColor;
-  frequencyWireframeMaterial.color = useStore().theme.frequencyGrid.lineColor;
+  beatColorMaterial.color = useStore.getState().theme.beat.color;
+  bassColorMaterial.color = useStore.getState().theme.bass.panelColor;
+  starFlashColorMaterial.color = useStore.getState().theme.background.starFlashColor;
+  frequencyWireframeMaterial.color = useStore.getState().theme.frequencyGrid.lineColor;
 
   useEffect(() => useStore.subscribe(
     state => state.theme.beat.color,

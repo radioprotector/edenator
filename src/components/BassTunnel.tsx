@@ -201,8 +201,8 @@ function BassTunnel(props: { audio: RefObject<HTMLAudioElement> }): JSX.Element 
   const trackAnalysis = useStore(state => state.analysis);
 
   // Because the wireframe/filler materials are cached across multiple renders, just ensure the colors reflects the state.
-  boxLineMaterial.color = useStore().theme.bass.wireframeColor;
-  panelFillMaterial.color = useStore().theme.bass.panelColor;
+  boxLineMaterial.color = useStore.getState().theme.bass.wireframeColor;
+  panelFillMaterial.color = useStore.getState().theme.bass.panelColor;
   
   useEffect(() => useStore.subscribe(
     state => state.theme.bass.wireframeColor,
