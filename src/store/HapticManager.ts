@@ -6,6 +6,7 @@ import Peak from "./Peak";
  * Describes the result of controller detection.
  */
 export enum ControllerDetectionResult {
+  NotSupported,
   Detected,
   NotDetected,
   VibrationMissing
@@ -95,6 +96,11 @@ export class HapticManager {
    * @returns The results of the detection.
    */
   public checkEligibleGamepad(): ControllerDetectionResult {
+    // First see if there is any kind of support whatsoever
+    if ('GamepadEvent' in window === false && 'vibrate' in navigator === false) {
+      return ControllerDetectionResult.NotSupported;
+    }
+
     let result = ControllerDetectionResult.NotDetected;
 
     // See if there are any available gamepads

@@ -119,11 +119,7 @@ button.btn:focus {
 
 /* Ensure that text labels next to icons get spaced */
 button.btn svg + .text-label {
-  padding-left: 0.25vw;
-}
-
-button.btn .fa-layers + .text-label {
-  padding-left: 0.5vw;
+  padding-left: 0.25em;
 }
 
 /* Make button text less bold on smaller widths */
@@ -135,6 +131,10 @@ button.btn .fa-layers + .text-label {
 
 /* Collapse text labels of buttons on smaller widths */
 @media (max-width: 576px) {
+  button.btn {
+    text-align: center;
+  }
+
   button.btn .text-label {
     display: none;
   }

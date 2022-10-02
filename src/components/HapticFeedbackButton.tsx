@@ -7,7 +7,7 @@ import { faBell, faBellSlash, faTriangleExclamation } from '@fortawesome/free-so
 import { useStore } from '../store/visualizerStore';
 import { ControllerDetectionResult, HapticManager } from '../store/HapticManager';
 
-function HapticFeedbackButton(): JSX.Element {
+function HapticFeedbackButton(): JSX.Element | null {
   const hapticManager = useStore(store => store.hapticManager);
   const [isEnabled, setIsEnabled] = useState(false);
   const [hasControllers, setHasControllers] = useState(ControllerDetectionResult.NotDetected);
@@ -71,19 +71,20 @@ function HapticFeedbackButton(): JSX.Element {
     buttonTitle = "Vibration is currently disabled. Click to enable vibration.";
   }
 
+  if (hasControllers === ControllerDetectionResult.NotSupported) {
+    return null;
+  }
+
   return (
     <button
       type="button"
       className="btn"
       title={buttonTitle}
       onClick={toggleHapticFeedback}
+      style={{}}
     >
-      <span
-        className="fa-layers fa-fw"
-      >
-        <FontAwesomeIcon icon="gamepad" transform="left-10" />
-        <FontAwesomeIcon icon={buttonSubIcon} transform="right-8" />
-      </span>
+      <FontAwesomeIcon icon="gamepad" />
+      <FontAwesomeIcon icon={buttonSubIcon} />
       <span className="text-label">
         {buttonText}
       </span>
