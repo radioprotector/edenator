@@ -49,7 +49,7 @@ function HapticFeedbackButton(): JSX.Element | null {
       case ControllerDetectionResult.Detected:
         buttonSubIcon = faBell;
         buttonText = "Vibration on";
-        buttonTitle = "Vibration is currently enabled. Click to disable vibration.";
+        buttonTitle = "Controller vibration is currently enabled. Click to disable vibration.";
         break;
 
       case ControllerDetectionResult.VibrationMissing:  
@@ -68,7 +68,7 @@ function HapticFeedbackButton(): JSX.Element | null {
   else {
     buttonSubIcon = faBellSlash;
     buttonText = "Vibration off";
-    buttonTitle = "Vibration is currently disabled. Click to enable vibration.";
+    buttonTitle = "Controller vibration is currently disabled. Click to enable vibration.";
   }
 
   if (hasControllers === ControllerDetectionResult.NotSupported) {
